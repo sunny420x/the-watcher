@@ -6,6 +6,7 @@
     <% if(open_ip.length > 0) { %>
     <div class="col-lg">
         <h2><span class="badge bg-primary"><%=open_ip.length%></span> Web servers</h2>
+        <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
             <tr>
                 <th>Type</th>
@@ -13,36 +14,38 @@
                 <th colspan="2">Action</th>
             </tr>
             <% if(open_ip.length != 0) { %>
-            <% 
-            let hiddenTypes = ['DEFAULT', 'CCTV', 'ROUTER', 'ERROR']
-            const classify = (title = '') => {
-                if (filter.error_page.some(p => title.includes(p))) return 'ERROR';
-                if (filter.cctv_page.some(p => title.includes(p))) return 'CCTV';
-                if (filter.router_page.some(p => title.includes(p))) return 'ROUTER';
-                if (filter.default_webserver_page.some(p => title.includes(p))) return 'DEFAULT';
-                return '';
-            };
-
-            open_ip = open_ip.map(ip => ({
-                ...ip,
-                type: classify(ip.title || '')
-            }));
-            open_ip.forEach(ip => { 
-            %>
-            <tr <% if(hiddenTypes.includes(ip.type)) {%>class="hidden"<%}%> >
-                <td><%=ip.type%></td>
-                <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
-                <td><a href="/nmap/<%=ip.host.slice(7)%>" target="_blank">nmap</a></td>
-            </tr>
-            <% }) %>
+                <% 
+                let hiddenTypes = ['DEFAULT', 'CCTV', 'ROUTER', 'ERROR']
+                const classify = (title = '') => {
+                    if (filter.error_page.some(p => title.includes(p))) return 'ERROR';
+                    if (filter.cctv_page.some(p => title.includes(p))) return 'CCTV';
+                    if (filter.router_page.some(p => title.includes(p))) return 'ROUTER';
+                    if (filter.default_webserver_page.some(p => title.includes(p))) return 'DEFAULT';
+                    return '';
+                };
+                
+                open_ip = open_ip.map(ip => ({
+                    ...ip,
+                    type: classify(ip.title || '')
+                }));
+                open_ip.forEach(ip => { 
+                    %>
+                    <tr <% if(hiddenTypes.includes(ip.type)) {%>class="hidden"<%}%> >
+                        <td><%=ip.type%></td>
+                        <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
+                        <td><a href="/nmap/<%=ip.host.slice(7)%>" target="_blank">nmap</a></td>
+                    </tr>
+                <% }) %>
             <%}%>
         </table>
+        </div>
     </div>
     <%}%>
 
     <% if(open_ssh.length > 0) { %> 
     <div class="col-lg">
         <h2><span class="badge bg-primary"><%=open_ssh.length%></span> SSH Servers</h2>
+        <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
             <tr>
                 <th>IP Address</th>
@@ -56,11 +59,13 @@
             <% }) %>
             <%}%>
         </table>
+        </div>
     </div>
     <%}%>
     <% if(open_ftp.length > 0) { %>
     <div class="col-lg">
         <h2><span class="badge bg-primary"><%=open_ftp.length%></span> FTP Servers</h2>
+        <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
             <tr>
                 <th>IP Address</th>
@@ -74,11 +79,13 @@
             <% }) %>
             <%}%>
         </table>
+        </div>
     </div>
     <%}%>
     <% if(open_rtsp.length > 0) { %>
     <div class="col-lg">
         <h2><span class="badge bg-primary"><%=open_rtsp.length%></span> RTSP Servers</h2>
+        <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
             <tr>
                 <th>IP Address</th>
@@ -92,6 +99,7 @@
             <% }) %>
             <%}%>
         </table>
+        </div>
     </div>
     <%}%>
 </div>
