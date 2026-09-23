@@ -265,6 +265,6 @@ app.get('/nmap/:ip', (req, res) => {
 })
 
 
-app.listen(4002, () => {
+app.listen(4004, () => {
     console.log('server listening on port http://localhost:4002')
 });
