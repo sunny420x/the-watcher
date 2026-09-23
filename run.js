@@ -9,6 +9,8 @@ app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'ejs')
 app.use(bodyParser.urlencoded({ extended: true }))
 
+app.use(express.static(path.join(__dirname, 'public')));
+
 const error_page = ['404 Not Found', 'Not Found', 'Unauthorized', '403 Forbidden', 'Access forbidden!', '500 - Internal server error.', 'Service Unavailable', '403 - Forbidden: Access is denied.']
 const router_page = ['Login', 'RouterOS', 'F612C', '&#70;&#54;&#56;&#56;']
 const cctv_page = ['WEB SERVICE', 'WEB']
