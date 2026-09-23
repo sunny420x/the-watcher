@@ -28,17 +28,33 @@ input {
 .shell {
     max-width: 1440px;
     margin: 0 auto;
-    padding: 28px clamp(18px, 4vw, 56px) 54px;
+    padding:
+        110px
+        clamp(18px, 4vw, 56px)
+        54px;
 }
 
 .topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 24px;
-    padding-bottom: 58px;
-}
+    gap: 30px;
 
+    height: 76px;
+    padding: 0 clamp(18px, 4vw, 56px);
+
+    border-bottom: 1px solid var(--line);
+
+    background: rgba(11, 16, 14, .82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
 .brand {
     display: flex;
     align-items: center;
@@ -54,20 +70,88 @@ input {
     place-items: center;
     width: 34px;
     height: 34px;
+    flex-shrink: 0;
+
     border: 1px solid var(--lime);
     border-radius: 50%;
+
     color: var(--lime);
     font-family: "DM Mono", monospace;
     font-size: 13px;
+
+    box-shadow:
+        0 0 18px rgba(198, 243, 107, .08);
 }
 
-.brand small {
+.brand-name {
     display: block;
-    margin-top: 2px;
+    line-height: 1;
+}
+
+.brand-name small {
+    display: block;
+    margin-top: 5px;
+
     color: var(--muted);
-    font: 11px "DM Mono", monospace;
+    font: 10px "DM Mono", monospace;
     letter-spacing: .08em;
     text-transform: uppercase;
+}
+
+/* Right side */
+
+.nav-status {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.live {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    color: var(--muted);
+    font: 10px "DM Mono", monospace;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.live-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+
+    border-radius: 50%;
+    background: var(--lime);
+
+    box-shadow:
+        0 0 10px var(--lime),
+        0 0 18px rgba(198, 243, 107, .35);
+}
+
+/* Current target */
+
+.target {
+    padding-left: 20px;
+    border-left: 1px solid var(--line);
+}
+
+.target span {
+    display: block;
+
+    color: #667268;
+    font: 9px "DM Mono", monospace;
+    letter-spacing: .1em;
+}
+
+.target strong {
+    display: block;
+    margin-top: 5px;
+
+    color: var(--ink);
+    font: 12px "DM Mono", monospace;
+    font-weight: 400;
 }
 
 .live {
@@ -458,5 +542,36 @@ Scanner Results
     #result .table th:nth-child(1),
     #result .table td:nth-child(1) {
         display: none;
+    }
+}
+
+@media (max-width: 700px) {
+    .topbar {
+        height: 68px;
+        padding: 0 18px;
+    }
+
+    .brand-name small {
+        display: none;
+    }
+
+    .nav-status {
+        gap: 12px;
+    }
+
+    .live {
+        font-size: 9px;
+    }
+
+    .target {
+        padding-left: 12px;
+    }
+
+    .target strong {
+        font-size: 10px;
+    }
+
+    .shell {
+        padding-top: 96px;
     }
 }
