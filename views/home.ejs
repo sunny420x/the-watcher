@@ -15,10 +15,9 @@
     <main class="shell">
         <section class="intro">
             <div class="intro-copy">
-                <p class="eyebrow">/ subnet observatory</p>
+                <p class="eyebrow">subnet observatory</p>
                 <h1>See what is<br><em>awake.</em></h1>
-                <p>Map every visible service in a local subnet. Follow the signal, then inspect the hosts that matter.
-                </p>
+                <!-- <p>Map every visible service in a local subnet. Follow the signal, then inspect the hosts that matter.</p> -->
             </div>
             <div class="scan-meta">CURRENT TARGET<strong id="targetLabel"><%=query%>.0/24</strong></div>
         </section>
@@ -31,14 +30,60 @@
                 <button onclick="next()" class="nav-button" title="Next subnet"
                     aria-label="Next subnet">&#8594;</button>
             </div>
-            <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')"> Include
-                low-signal hosts</label>
+            <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')"> Include hosts with default page.</label>
         </section>
         <div id="result"></div>
         <div class="graph-heading">
             <h2>Network constellation</h2><span>live topology / port 80</span>
         </div>
         <div id="wrapper"><canvas id="myCanvas">Your browser does not support the canvas element.</canvas></div>
+        <section aria-label="Must-see hosts">
+            <div class="must-see">
+                <h2>Must-see hosts</h2>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <input type="text" id="mustSeeInput" placeholder="Add a must-see host" class="controls" style="color: white; outline: none;">
+                    <button onclick="addMustSeeHost(document.getElementById('mustSeeInput').value)" class="nav-button">Add</button>
+                </div>
+                <ul id="mustSeeList"></ul>
+                <script>
+                    function getMustSeeHosts() {
+                        fetch('/hosts/must-see')
+                            .then(response => response.json())
+                            .then(data => {
+                                const mustSeeList = document.getElementById('mustSeeList');
+                                mustSeeList.innerHTML = '';
+                                data.mustSee.forEach(host => {
+                                    const li = document.createElement('li');
+                                    li.textContent = host;
+                                    mustSeeList.appendChild(li);
+                                });
+                            })
+                            .catch(err => console.error(err));
+                    }
+    
+                    getMustSeeHosts();
+                </script>
+                <script>
+                    function addMustSeeHost(host) {
+                        fetch('/hosts/must-see', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ line: host })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                getMustSeeHosts();
+                            }
+                        })
+                        .catch(err => console.error(err));
+                    }
+                </script>
+                <ul id="mustSeeList"></ul>
+            </div>
+        </section>
     </main>
     <script>
         const canvas = document.getElementById("myCanvas");
@@ -228,7 +273,6 @@
 
             event.preventDefault();
         }, true);
-
         initField()
     </script>
 </body>

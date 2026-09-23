@@ -2,7 +2,6 @@
     <% if(open_ip.length == 0 && open_ftp.length == 0 && open_ssh.length == 0 && open_rtsp.length == 0) { %>
         Not found.
     <%}%>
-
     <% if(open_ip.length > 0) { %>
     <div class="col-lg">
         <h2><span class="badge bg-primary"><%=open_ip.length%></span> Web servers</h2>
@@ -41,7 +40,6 @@
         </div>
     </div>
     <%}%>
-
     <% if(open_ssh.length > 0) { %> 
     <div class="col-lg">
         <h2><span class="badge bg-primary"><%=open_ssh.length%></span> SSH Servers</h2>
