@@ -169,14 +169,24 @@ async function scanRTSP(ip_range) {
 }
 
 app.get('/', (req, res) => {
-    fetch('https://api.myip.com').then((status) => {
-        if (status.ok) {
-            return status.json()
-        }
-    }).then(data => {
-        res.redirect('/' + data.ip.split('.')[0] + "." + data.ip.split('.')[1] + "." + data.ip.split('.')[2])
-    })
-})
+    fetch('https://api.ipify.org?format=json')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to get public IP');
+            }
+
+            return response.json();
+        })
+        .then(data => {
+            const parts = data.ip.split('.');
+
+            res.redirect(`/${parts[0]}.${parts[1]}.${parts[2]}`);
+        })
+        .catch(err => {
+            console.error(err);
+            res.status(500).send('Unable to detect public IP');
+        });
+});
 
 app.get('/:range', (req, res) => {
     let ip_range = req.params.range
