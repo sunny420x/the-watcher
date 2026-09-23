@@ -20,7 +20,8 @@
                     if (filter.cctv_page.some(p => title.includes(p))) return 'CCTV';
                     if (filter.router_page.some(p => title.includes(p))) return 'ROUTER';
                     if (filter.default_webserver_page.some(p => title.includes(p))) return 'DEFAULT';
-                    return '';
+                    if (filter.directory_listing.some(p => title.includes(p))) return 'DIRECTORY';
+                    return 'OPEN PORT';
                 };
                 
                 open_ip = open_ip.map(ip => ({

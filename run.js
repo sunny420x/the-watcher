@@ -17,11 +17,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 const error_page = ['404 Not Found', 'Not Found', 'Unauthorized', '403 Forbidden', 'Access forbidden!', '500 - Internal server error.', 'Service Unavailable', '403 - Forbidden: Access is denied.']
 const router_page = ['Login', 'RouterOS', 'F612C', '&#70;&#54;&#56;&#56;']
 const cctv_page = ['WEB SERVICE', 'WEB']
+const directory_listing = ['Index of']
 const default_webserver_page = ['IIS Windows', 'IIS Windows Server', 'Test Page for the Apache HTTP Server on Fedora Core',
     'Welcome to nginx!', 'Default Site', 'Test Page for the HTTP Server on AlmaLinux', 'Apache2 Ubuntu Default Page: It works', "Web Server's Default Page", 'Welcome to XAMPP']
 
 let filter = {
-    error_page, router_page, cctv_page, default_webserver_page
+    error_page, router_page, cctv_page, directory_listing, default_webserver_page
 }
 
 function scanPort(host, port) {
@@ -204,40 +205,35 @@ app.get('/:range', (req, res) => {
     }
 });
 
-app.get('/run/:range', (req, res) => {
+app.get('/run/:range', async (req, res) => {
     let ip_range = req.params.range
     if (ip_range.split(".").length == 3) {
-        scanWebServer(ip_range).then(open_ip => {
-            scanSSH(ip_range).then(open_ssh => {
-                scanFTP(ip_range).then(open_ftp => {
-                    scanRTSP(ip_range).then(open_rtsp => {
-                        res.render('components/result.ejs', {
-                            open_ip,
-                            open_ssh,
-                            open_ftp,
-                            open_rtsp,
-                            filter,
-                        }, (err, html) => {
+        const open_ip = await scanWebServer(ip_range);
+        const open_ssh = await scanSSH(ip_range);
+        const open_ftp = await scanFTP(ip_range);
+        const open_rtsp = await scanRTSP(ip_range);
 
-                            if (err) {
-                                return res.status(500).json({ error: err.message });
-                            }
-
-                            res.json({
-                                html: html,
-                                data: {
-                                    open_ip,
-                                    open_ssh,
-                                    open_ftp,
-                                    open_rtsp,
-                                    filter
-                                }
-                            });
-                        });
-                    })
-                })
-            })
-        })
+        res.render('components/result.ejs', {
+            open_ip,
+            open_ssh,
+            open_ftp,
+            open_rtsp,
+            filter,
+        }, (err, html) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({
+                html: html,
+                data: {
+                    open_ip,
+                    open_ssh,
+                    open_ftp,
+                    open_rtsp,
+                    filter
+                }
+            });
+        });
     } else {
         res.send("Please enter ip range in this level: 0.0.0 - 255.255.255")
     }
@@ -327,5 +323,5 @@ app.post('/hosts/must-see', (req, res) => {
 });
 
 app.listen(4004, () => {
-    console.log('server listening on port http://localhost:4004')
+    console.log('[+] The Watcher is listening on port http://localhost:4004')
 });
