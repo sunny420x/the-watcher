@@ -5,6 +5,21 @@ const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser')
 const { exec } = require('child_process');
+const mysql = require('mysql2/promise');
+
+require('dotenv').config();
+
+const db = mysql.createPool({
+    host: process.env.MYSQL_HOST || 'localhost',
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD || '',
+    database: process.env.MYSQL_DATABASE || 'watcher',
+
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
 
 app.set('views', path.join(__dirname, 'views'))
 app.set('view engine', 'ejs')
@@ -181,6 +196,87 @@ async function scanRTSP(ip_range) {
     return open_ip;
 }
 
+async function getScanCache(ip_range) {
+    const [rows] = await db.execute(
+        `
+        SELECT
+            ip_range,
+            open_ip,
+            open_ssh,
+            open_ftp,
+            open_rtsp,
+            scanned_at
+        FROM scan_cache
+        WHERE ip_range = ?
+        LIMIT 1
+        `,
+        [ip_range]
+    );
+
+    if (rows.length === 0) {
+        return null;
+    }
+
+    const row = rows[0];
+
+    return {
+        ip_range: row.ip_range,
+        open_ip: typeof row.open_ip === 'string'
+            ? JSON.parse(row.open_ip)
+            : row.open_ip,
+
+        open_ssh: typeof row.open_ssh === 'string'
+            ? JSON.parse(row.open_ssh)
+            : row.open_ssh,
+
+        open_ftp: typeof row.open_ftp === 'string'
+            ? JSON.parse(row.open_ftp)
+            : row.open_ftp,
+
+        open_rtsp: typeof row.open_rtsp === 'string'
+            ? JSON.parse(row.open_rtsp)
+            : row.open_rtsp,
+
+        scanned_at: row.scanned_at
+    };
+}
+
+async function saveScanCache(
+    ip_range,
+    open_ip,
+    open_ssh,
+    open_ftp,
+    open_rtsp
+) {
+    await db.execute(
+        `
+        INSERT INTO scan_cache
+        (
+            ip_range,
+            open_ip,
+            open_ssh,
+            open_ftp,
+            open_rtsp
+        )
+        VALUES (?, ?, ?, ?, ?)
+
+        ON DUPLICATE KEY UPDATE
+            open_ip = VALUES(open_ip),
+            open_ssh = VALUES(open_ssh),
+            open_ftp = VALUES(open_ftp),
+            open_rtsp = VALUES(open_rtsp),
+            scanned_at = CURRENT_TIMESTAMP
+        `,
+        [
+            ip_range,
+            JSON.stringify(open_ip),
+            JSON.stringify(open_ssh),
+            JSON.stringify(open_ftp),
+            JSON.stringify(open_rtsp)
+        ]
+    );
+}
+
 app.get('/', (req, res) => {
     fetch('https://api.ipify.org?format=json')
         .then(response => {
@@ -213,36 +309,116 @@ app.get('/:range', (req, res) => {
 });
 
 app.get('/run/:range', async (req, res) => {
-    let ip_range = req.params.range
-    if (ip_range.split(".").length == 3) {
+    const ip_range = req.params.range;
+
+    if (ip_range.split(".").length !== 3) {
+        return res.send(
+            "Please enter ip range in this level: 0.0.0 - 255.255.255"
+        );
+    }
+
+    try {
+        const cached = await getScanCache(ip_range);
+
+        if (cached) {
+
+            console.log(`[CACHE] ${ip_range}`);
+
+            return res.render(
+                'components/result.ejs',
+                {
+                    open_ip: cached.open_ip,
+                    open_ssh: cached.open_ssh,
+                    open_ftp: cached.open_ftp,
+                    open_rtsp: cached.open_rtsp,
+                    filter,
+
+                    cached: true,
+                    scanned_at: cached.scanned_at
+                },
+                (err, html) => {
+
+                    if (err) {
+                        return res.status(500).json({
+                            error: err.message
+                        });
+                    }
+
+                    res.json({
+                        html: html,
+
+                        data: {
+                            open_ip: cached.open_ip,
+                            open_ssh: cached.open_ssh,
+                            open_ftp: cached.open_ftp,
+                            open_rtsp: cached.open_rtsp,
+                            filter,
+
+                            cached: true,
+                            scanned_at: cached.scanned_at
+                        }
+                    });
+                }
+            );
+        }
+
+        console.log(`[SCAN] ${ip_range}`);
+
         const open_ip = await scanWebServer(ip_range);
         const open_ssh = await scanSSH(ip_range);
         const open_ftp = await scanFTP(ip_range);
         const open_rtsp = await scanRTSP(ip_range);
 
-        res.render('components/result.ejs', {
+        await saveScanCache(
+            ip_range,
             open_ip,
             open_ssh,
             open_ftp,
-            open_rtsp,
-            filter,
-        }, (err, html) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            res.json({
-                html: html,
-                data: {
-                    open_ip,
-                    open_ssh,
-                    open_ftp,
-                    open_rtsp,
-                    filter
+            open_rtsp
+        );
+
+        res.render(
+            'components/result.ejs',
+            {
+                open_ip,
+                open_ssh,
+                open_ftp,
+                open_rtsp,
+                filter,
+
+                cached: false,
+                scanned_at: new Date()
+            },
+            (err, html) => {
+
+                if (err) {
+                    return res.status(500).json({
+                        error: err.message
+                    });
                 }
-            });
+
+                res.json({
+                    html: html,
+
+                    data: {
+                        open_ip,
+                        open_ssh,
+                        open_ftp,
+                        open_rtsp,
+                        filter,
+
+                        cached: false,
+                        scanned_at: new Date()
+                    }
+                });
+            }
+        );
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            error: err.message
         });
-    } else {
-        res.send("Please enter ip range in this level: 0.0.0 - 255.255.255")
     }
 });
 
