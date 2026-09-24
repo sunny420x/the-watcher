@@ -34,7 +34,7 @@
                     <tr <% if(hiddenTypes.includes(ip.type)) {%>class="hidden"<%}%> >
                         <td><%=ip.type%></td>
                         <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
-                        <td><a onclick="nmap('<%=ip%>')">nmap</a></td>
+                        <td><button onclick="nmap('<%=ip.host.slice(7)%>')">nmap</button></td>
                     </tr>
                 <% }) %>
             <%}%>
@@ -111,7 +111,7 @@
             <% open_rtsp.forEach(ip => { 
             %>
             <tr>
-                <td><a href="/rtsp/<%= ip %>" target="_blank"><%= ip %></a></td>
+                <td><button onclick="rtsp('<%= ip %>')"><%= ip %></button></td>
             </tr>
             <% }) %>
             <%}%>
