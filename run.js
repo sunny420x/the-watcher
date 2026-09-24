@@ -17,12 +17,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 const error_page = ['404 Not Found', 'Not Found', 'Unauthorized', '403 Forbidden', 'Access forbidden!', '500 - Internal server error.', 'Service Unavailable', '403 - Forbidden: Access is denied.']
 const router_page = ['Login', 'RouterOS', 'F612C', '&#70;&#54;&#56;&#56;']
 const cctv_page = ['WEB SERVICE', 'WEB']
-const directory_listing = ['Index of']
-const default_webserver_page = ['IIS Windows', 'IIS Windows Server', 'Test Page for the Apache HTTP Server on Fedora Core',
-    'Welcome to nginx!', 'Default Site', 'Test Page for the HTTP Server on AlmaLinux', 'Apache2 Ubuntu Default Page: It works', "Web Server's Default Page", 'Welcome to XAMPP']
+const directory_listing = ['Index of', '/']
+const error = ['error', 'not found', 'unauthorized', 'forbidden']
+const nsfw = ['adult', 'porn', 'xxx', 'sex', 'nsfw']
+const default_webserver_page = ['IIS Windows', 'IIS Windows Server', 'Test Page for the Apache HTTP Server on Fedora Core', 'Success!',
+    'Welcome to nginx!', 'Default Site', 'Test Page for the HTTP Server on AlmaLinux', 'Apache2 Ubuntu Default Page: It works', "Web Server's Default Page", 'Welcome to XAMPP', 'Apache HTTP']
 
 let filter = {
-    error_page, router_page, cctv_page, directory_listing, default_webserver_page
+    error_page, router_page, cctv_page, directory_listing, default_webserver_page, error, nsfw
 }
 
 function scanPort(host, port) {
@@ -56,7 +58,11 @@ async function findWebServer(ip) {
 
     if (isOpen) {
         const title = await getWebServerTitle(host);
-        return { host: `http://${host}`, title: title }
+        if(title) {
+            return { host: `http://${host}`, title: title }
+        } else {
+            return 0;
+        }
     }
 }
 
@@ -127,7 +133,8 @@ async function scanWebServer(ip_range) {
 
     for (let i = 0; i < 255; i++) {
         const ip = `${ip_range}.${i}`;
-        open_ip_promises.push(findWebServer(ip));
+        const web_server = findWebServer(ip);
+        open_ip_promises.push(web_server);
     }
 
     const results = await Promise.all(open_ip_promises);
