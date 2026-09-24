@@ -6,7 +6,9 @@
     <title>The Watcher / Network Scanner</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
@@ -30,19 +32,36 @@
                 <button onclick="next()" class="nav-button" title="Next subnet"
                     aria-label="Next subnet">&#8594;</button>
             </div>
-            <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')"> Include hosts with default page.</label>
+            <div style="display: flex; flex-direction: row; gap: 8px;">
+                <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')">
+                    Include hosts with default page.</label>
+                <label class="filter"><input type="checkbox" id="networkConstellationFilter"
+                        onchange="toggleNetworkConstellation()"> Show network constellation.</label>
+            </div>
+            <script>
+                function toggleNetworkConstellation() {
+                    const networkConstellation = document.getElementById('network-constellation');
+                    networkConstellation.style.display = document.getElementById('networkConstellationFilter').checked ? 'block' : 'none';
+                }
+
+            </script>
         </section>
-        <div id="result"></div>
-        <div class="graph-heading">
-            <h2>Network constellation</h2><span>live topology / port 80</span>
+        <div id="result">
         </div>
-        <div id="wrapper"><canvas id="myCanvas">Your browser does not support the canvas element.</canvas></div>
+        <div id="network-constellation" style="display: none;">
+            <div class="graph-heading">
+                <h2>Network constellation</h2><span>live topology / port 80</span>
+            </div>
+            <div id="wrapper"><canvas id="myCanvas">Your browser does not support the canvas element.</canvas></div>
+        </div>
         <section aria-label="Must-see hosts">
             <div class="must-see">
                 <h2>Must-see hosts</h2>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <input type="text" id="mustSeeInput" placeholder="Add a must-see host" class="controls" style="color: white; outline: none;">
-                    <button onclick="addMustSeeHost(document.getElementById('mustSeeInput').value)" class="nav-button">Add</button>
+                    <input type="text" id="mustSeeInput" placeholder="Add a must-see host" class="controls"
+                        style="color: white; outline: none;">
+                    <button onclick="addMustSeeHost(document.getElementById('mustSeeInput').value)"
+                        class="nav-button">Add</button>
                 </div>
                 <ul id="mustSeeList"></ul>
                 <script>
@@ -72,13 +91,13 @@
                             },
                             body: JSON.stringify({ line: host })
                         })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                getMustSeeHosts();
-                            }
-                        })
-                        .catch(err => console.error(err));
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    getMustSeeHosts();
+                                }
+                            })
+                            .catch(err => console.error(err));
                     }
                 </script>
                 <ul id="mustSeeList"></ul>
@@ -239,7 +258,7 @@
         }
 
         function search(value) {
-            document.getElementById('result').innerHTML = "<br>Loading..."
+            document.getElementById('result').innerHTML = loadingSvg
             run(value);
             range = value.split('.')[0] + '.' + value.split('.')[1] + '.';
             current = parseInt(value.split('.')[2])

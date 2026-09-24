@@ -1,9 +1,9 @@
-<div class="row mt-4">
+<div class="d-flex flex-wrap mt-4">
     <% if(open_ip.length == 0 && open_ftp.length == 0 && open_ssh.length == 0 && open_rtsp.length == 0) { %>
         Not found.
     <%}%>
     <% if(open_ip.length > 0) { %>
-    <div class="col-lg">
+    <div>
         <h2><span class="badge bg-primary"><%=open_ip.length%></span> Web servers</h2>
         <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
@@ -43,7 +43,7 @@
     </div>
     <%}%>
     <% if(open_ssh.length > 0) { %> 
-    <div class="col-lg">
+    <div>
         <h2><span class="badge bg-primary"><%=open_ssh.length%></span> SSH Servers</h2>
         <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
@@ -63,7 +63,7 @@
     </div>
     <%}%>
     <% if(open_ftp.length > 0) { %>
-    <div class="col-lg">
+    <div>
         <h2><span class="badge bg-primary"><%=open_ftp.length%></span> FTP Servers</h2>
         <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
@@ -83,7 +83,7 @@
     </div>
     <%}%>
     <% if(open_rtsp.length > 0) { %>
-    <div class="col-lg">
+    <div>
         <h2><span class="badge bg-primary"><%=open_rtsp.length%></span> RTSP Servers</h2>
         <div class="overflow-auto" style="max-height: 500px;">
         <table class="table mt-4">
