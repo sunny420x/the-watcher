@@ -414,7 +414,7 @@ app.get('/rtsp/:ip', (req, res) => {
             res.send(err);
             return;
         }
-        res.send(`<pre>${stdout}</pre>`);
+        res.json({stdout});
     });
 })
 
@@ -426,7 +426,7 @@ app.get('/ftp/:ip', (req, res) => {
             res.send(err);
             return;
         }
-        res.send(`<pre>${stdout}</pre>`);
+        res.json({stdout});
     });
 })
 
@@ -438,7 +438,7 @@ app.get('/nmap/:ip', (req, res) => {
             res.send(err);
             return;
         }
-        res.send(`<pre>${stdout}</pre>`);
+        res.json({stdout});
     });
 })
 

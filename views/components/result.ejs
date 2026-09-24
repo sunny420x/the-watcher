@@ -34,11 +34,28 @@
                     <tr <% if(hiddenTypes.includes(ip.type)) {%>class="hidden"<%}%> >
                         <td><%=ip.type%></td>
                         <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
-                        <td><a href="/nmap/<%=ip.host.slice(7)%>" target="_blank">nmap</a></td>
+                        <td><a onclick="nmap('<%=ip%>')">nmap</a></td>
                     </tr>
                 <% }) %>
             <%}%>
         </table>
+        <script>
+            function nmap(ip) {
+                fetch('/nmap/' + ip)
+                    .then(response => response.json())
+                    .then(data => {
+                        Swal.fire({
+                            title: 'Nmap Result',
+                            html: `<pre>${data.stdout}</pre>`,
+                            width: 800,
+                            confirmButtonText: 'Close'
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        </script>
         </div>
     </div>
     <%}%>
@@ -99,6 +116,23 @@
             <% }) %>
             <%}%>
         </table>
+        <script>
+            function rtsp(ip) {
+                fetch('/rtsp/' + ip)
+                    .then(response => response.json())
+                    .then(data => {
+                        Swal.fire({
+                            title: 'RTSP Result',
+                            html: `<pre>${data.stdout}</pre>`,
+                            width: 800,
+                            confirmButtonText: 'Close'
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+        </script>
         </div>
     </div>
     <%}%>
