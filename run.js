@@ -278,23 +278,8 @@ async function saveScanCache(
 }
 
 app.get('/', (req, res) => {
-    fetch('https://api.ipify.org?format=json')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to get public IP');
-            }
-
-            return response.json();
-        })
-        .then(data => {
-            const parts = data.ip.split('.');
-
-            res.redirect(`/${parts[0]}.${parts[1]}.${parts[2]}`);
-        })
-        .catch(err => {
-            console.error(err);
-            res.status(500).send('Unable to detect public IP');
-        });
+    const parts = req.ip.split('.');
+    res.redirect(`/${parts[0]}.${parts[1]}.${parts[2]}`);
 });
 
 app.get('/:range', (req, res) => {
