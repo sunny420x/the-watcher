@@ -21,7 +21,7 @@
                 <h1>See what is<br><em>awake.</em></h1>
                 <!-- <p>Map every visible service in a local subnet. Follow the signal, then inspect the hosts that matter.</p> -->
             </div>
-            <div class="scan-meta">CURRENT TARGET<strong id="targetLabel"><%=query%>.0/24</strong></div>
+            <div class="scan-meta">CURRENT TARGET<strong id="targetLabel"><span name="currentTarget"></span>.0/24</strong></div>
         </section>
         <section aria-label="Scan controls">
             <div class="controls">
@@ -230,7 +230,7 @@
             history.pushState(null, null, '/' + range + current);
 
             clearCanvas();
-
+            document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
         }
 
         function back() {
@@ -248,12 +248,14 @@
             history.pushState(null, null, '/' + range + current);
 
             clearCanvas();
+            document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
         }
 
         function initField() {
             document.getElementById('result').innerHTML = loadingSvg
 
             document.getElementById('query').value = range + current
+            document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
             run(range + current)
         }
 
@@ -263,6 +265,7 @@
             range = value.split('.')[0] + '.' + value.split('.')[1] + '.';
             current = parseInt(value.split('.')[2])
             history.pushState(null, null, '/' + value);
+            document.getElementsByName('currentTarget').forEach(el => el.textContent = value);
         }
 
         function toggleFilter(option) {
