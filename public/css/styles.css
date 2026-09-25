@@ -437,12 +437,12 @@ Scanner Results
 }
 
 /* IP / Host */
-#result .table td a {
+#result .table td button {
     color: var(--cyan);
     text-decoration: none;
 }
 
-#result .table td a:hover {
+#result .table td button:hover {
     color: var(--lime);
     text-decoration: underline;
 }
