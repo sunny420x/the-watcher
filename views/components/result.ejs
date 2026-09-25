@@ -34,7 +34,7 @@
                     <tr <% if(hiddenTypes.includes(ip.type)) {%>class="hidden"<%}%> >
                         <td><%=ip.type%></td>
                         <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
-                        <td><button class="nav-button" style="font-size: 12px; text-decoration: none;" onclick="nmap('<%=ip.host.slice(7)%>')">Nmap</button></td>
+                        <td><button onclick="nmap('<%=ip.host.slice(7)%>')">Nmap</button></td>
                     </tr>
                 <% }) %>
             <%}%>

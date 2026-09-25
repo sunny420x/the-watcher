@@ -294,8 +294,15 @@
         }, true);
 
         initField()
-        
+
         function nmap(ip) {
+            Swal.fire({
+                title: 'Running Nmap...',
+                didOpen: () => {
+                    Swal.showLoading()
+                },
+                allowOutsideClick: false
+            });
             fetch('/nmap/' + ip)
                 .then(response => response.json())
                 .then(data => {
@@ -305,12 +312,20 @@
                         width: 800,
                         confirmButtonText: 'Close'
                     });
+                    Swal.close();
                 })
                 .catch(error => {
                     console.error('Error:', error);
                 });
         }
         function rtsp(ip) {
+            Swal.fire({
+                title: 'Running Nmap...',
+                didOpen: () => {
+                    Swal.showLoading()
+                },
+                allowOutsideClick: false
+            });
             fetch('/rtsp/' + ip)
                 .then(response => response.json())
                 .then(data => {
@@ -320,6 +335,7 @@
                         width: 800,
                         confirmButtonText: 'Close'
                     });
+                    Swal.close();
                 })
                 .catch(error => {
                     console.error('Error:', error);

@@ -455,7 +455,7 @@ Scanner Results
 }
 
 /* Action links */
-#result .table td a[href^="/nmap"] {
+#result .table td button {
     display: inline-block;
     padding: 4px 7px;
     border: 1px solid var(--line);
@@ -467,7 +467,7 @@ Scanner Results
     transition: .15s ease;
 }
 
-#result .table td a[href^="/nmap"]:hover {
+#result .table td button.nav-button:hover {
     border-color: var(--lime);
     color: var(--lime);
     background: rgba(198, 243, 107, .05);
