@@ -468,6 +468,11 @@ Scanner Results
     cursor: pointer;
 }
 
+#result .table td a {
+    color: #fff !important;
+    text-decoration: none;
+}
+
 #result .table td button.nav-button:hover {
     border-color: var(--lime);
     color: var(--lime);
