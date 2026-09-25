@@ -462,9 +462,10 @@ Scanner Results
     border-radius: 4px;
     color: var(--muted);
     font-size: 10px;
-    text-decoration: none;
     text-transform: uppercase;
     transition: .15s ease;
+    background: transparent;
+    cursor: pointer;
 }
 
 #result .table td button.nav-button:hover {
