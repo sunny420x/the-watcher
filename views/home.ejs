@@ -306,13 +306,13 @@
             fetch('/nmap/' + ip)
                 .then(response => response.json())
                 .then(data => {
+                    Swal.close();
                     Swal.fire({
                         title: 'Nmap Result',
                         html: `<pre>${data.stdout}</pre>`,
                         width: 800,
                         confirmButtonText: 'Close'
                     });
-                    Swal.close();
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -329,13 +329,13 @@
             fetch('/rtsp/' + ip)
                 .then(response => response.json())
                 .then(data => {
+                    Swal.close();
                     Swal.fire({
                         title: 'RTSP Result',
                         html: `<pre>${data.stdout}</pre>`,
                         width: 800,
                         confirmButtonText: 'Close'
                     });
-                    Swal.close();
                 })
                 .catch(error => {
                     console.error('Error:', error);
