@@ -292,7 +292,39 @@
 
             event.preventDefault();
         }, true);
+
         initField()
+        
+        function nmap(ip) {
+            fetch('/nmap/' + ip)
+                .then(response => response.json())
+                .then(data => {
+                    Swal.fire({
+                        title: 'Nmap Result',
+                        html: `<pre>${data.stdout}</pre>`,
+                        width: 800,
+                        confirmButtonText: 'Close'
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+        function rtsp(ip) {
+            fetch('/rtsp/' + ip)
+                .then(response => response.json())
+                .then(data => {
+                    Swal.fire({
+                        title: 'RTSP Result',
+                        html: `<pre>${data.stdout}</pre>`,
+                        width: 800,
+                        confirmButtonText: 'Close'
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
