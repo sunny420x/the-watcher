@@ -56,14 +56,19 @@
         </div>
         <section aria-label="Must-see hosts">
             <div class="must-see">
-                <h2>Must-see hosts</h2>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <input type="text" id="mustSeeInput" placeholder="Add a must-see host" class="controls"
-                        style="color: white; outline: none;">
-                    <button onclick="addMustSeeHost(document.getElementById('mustSeeInput').value)"
-                        class="nav-button">Add</button>
+                <div class="must-see-heading">
+                    <div>
+                        <p class="eyebrow">Watchlist</p>
+                        <h2>Must-see hosts</h2>
+                    </div>
+                    <span class="must-see-mark" aria-hidden="true">&#9733;</span>
                 </div>
-                <ul id="mustSeeList"></ul>
+                <p class="must-see-description">Keep important hosts close while you scan the network.</p>
+                <div class="must-see-form">
+                    <input type="text" id="mustSeeInput" placeholder="IP address or URL" aria-label="Host IP address or URL">
+                    <button onclick="addMustSeeHost(document.getElementById('mustSeeInput').value)" class="nav-button">Add host <span aria-hidden="true">+</span></button>
+                </div>
+                <ul id="mustSeeList" aria-label="Hosts to watch"></ul>
                 <script>
                     function getMustSeeHosts() {
                         fetch('/hosts/must-see')
@@ -100,7 +105,6 @@
                             .catch(err => console.error(err));
                     }
                 </script>
-                <ul id="mustSeeList"></ul>
             </div>
         </section>
     </main>

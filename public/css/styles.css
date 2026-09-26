@@ -330,6 +330,149 @@ h1 em {
     scrollbar-color: #38523d transparent;
 }
 
+/* Must-see watchlist */
+.must-see {
+    margin: 42px 0 0 auto;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background:
+        radial-gradient(circle at 100% 0%, rgba(198, 243, 107, .08), transparent 38%),
+        var(--panel);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, .18);
+}
+
+.must-see-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.must-see-heading .eyebrow {
+    margin-bottom: 7px;
+    font-size: 10px;
+}
+
+.must-see-heading h2 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: -.04em;
+}
+
+.must-see-mark {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(198, 243, 107, .24);
+    border-radius: 11px;
+    color: var(--lime);
+    background: rgba(198, 243, 107, .07);
+    font-size: 18px;
+}
+
+.must-see-description {
+    margin: 10px 0 18px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.must-see-form {
+    display: flex;
+    gap: 8px;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(5, 10, 8, .42);
+}
+
+.must-see-form input {
+    flex: 1;
+    min-width: 0;
+    padding: 0 10px;
+    border: 0;
+    outline: 0;
+    color: var(--ink);
+    background: transparent;
+    font: 12px "DM Mono", monospace;
+}
+
+.must-see-form input::placeholder {
+    color: #667268;
+}
+
+.must-see-form input:focus-visible {
+    box-shadow: 0 1px 0 var(--lime);
+}
+
+.must-see-form .nav-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
+    color: var(--lime);
+    font-size: 12px;
+}
+
+.must-see-form .nav-button span {
+    font-size: 18px;
+    line-height: 1;
+}
+
+#mustSeeList {
+    display: grid;
+    gap: 7px;
+    max-height: 260px;
+    margin: 16px 0 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    scrollbar-color: #38523d transparent;
+}
+
+#mustSeeList:empty::after {
+    content: "No hosts saved yet";
+    padding: 14px;
+    border: 1px dashed rgba(205, 234, 201, .15);
+    border-radius: 8px;
+    color: #748176;
+    font: 11px "DM Mono", monospace;
+    text-align: center;
+}
+
+#mustSeeList li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 9px 12px 9px 31px;
+    overflow-wrap: anywhere;
+    border: 1px solid rgba(205, 234, 201, .08);
+    border-radius: 8px;
+    color: var(--cyan);
+    background: rgba(255, 255, 255, .025);
+    font: 12px "DM Mono", monospace;
+    transition: border-color .18s ease, background .18s ease;
+}
+
+#mustSeeList li::before {
+    position: absolute;
+    left: 13px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 9px rgba(198, 243, 107, .55);
+    content: "";
+}
+
+#mustSeeList li:hover {
+    border-color: rgba(198, 243, 107, .25);
+    background: rgba(198, 243, 107, .04);
+}
+
 #myCanvas {
     display: block;
 }
@@ -579,5 +722,20 @@ Scanner Results
 
     .shell {
         padding-top: 96px;
+    }
+
+    .must-see {
+        margin-top: 32px;
+        padding: 19px;
+    }
+}
+
+@media (max-width: 420px) {
+    .must-see-form {
+        flex-direction: column;
+    }
+
+    .must-see-form input {
+        min-height: 38px;
     }
 }
