@@ -302,6 +302,43 @@
 
         initField()
 
+        function previewHost(host) {
+            let previewUrl;
+            try {
+                previewUrl = new URL(host, window.location.origin);
+                if (!['http:', 'https:'].includes(previewUrl.protocol)) {
+                    throw new Error('Unsupported protocol');
+                }
+            } catch (error) {
+                Swal.fire({
+                    title: 'Invalid host',
+                    text: 'This host cannot be previewed.',
+                    icon: 'error'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: `Preview · ${previewUrl.host}`,
+                html: '<div class="host-preview-frame"></div>',
+                width: 'min(1100px, 94vw)',
+                padding: '18px',
+                showCloseButton: true,
+                showConfirmButton: false,
+                customClass: { popup: 'host-preview-popup' },
+                didOpen: () => {
+                    const frame = document.createElement('iframe');
+                    frame.src = previewUrl.href;
+                    frame.title = `Preview of ${previewUrl.host}`;
+                    frame.loading = 'lazy';
+                    frame.referrerPolicy = 'no-referrer';
+                    frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups');
+                    frame.className = 'host-preview-iframe';
+                    document.querySelector('.host-preview-frame').appendChild(frame);
+                }
+            });
+        }
+
         function nmap(ip) {
             Swal.fire({
                 title: 'Running Nmap...',

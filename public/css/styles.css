@@ -330,6 +330,36 @@ h1 em {
     scrollbar-color: #38523d transparent;
 }
 
+.host-preview-popup {
+    border: 1px solid rgba(205, 234, 201, .18) !important;
+    border-radius: 14px !important;
+    color: var(--ink) !important;
+    background: #101914 !important;
+}
+
+.host-preview-popup .swal2-title {
+    color: var(--ink);
+    font: 500 17px "DM Mono", monospace;
+}
+
+.host-preview-frame {
+    width: 100%;
+    height: min(68vh, 680px);
+    min-height: 300px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: #fff;
+}
+
+.host-preview-iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}
+
 /* Must-see watchlist */
 .must-see {
     margin: 42px 0 0 auto;
