@@ -328,7 +328,9 @@
                 customClass: { popup: 'host-preview-popup' },
                 didOpen: () => {
                     const frame = document.createElement('iframe');
-                    frame.src = previewUrl.href;
+                    frame.src = previewUrl.protocol === 'http:'
+                        ? `/preview?url=${encodeURIComponent(previewUrl.href)}`
+                        : previewUrl.href;
                     frame.title = `Preview of ${previewUrl.host}`;
                     frame.loading = 'lazy';
                     frame.referrerPolicy = 'no-referrer';

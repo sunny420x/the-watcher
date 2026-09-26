@@ -1,4 +1,5 @@
 const net = require('net');
+const { URL } = require('url');
 const express = require('express')
 const app = express()
 const fs = require('fs');
@@ -27,6 +28,67 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.enable('trust proxy'); 
+
+// Serve HTTP scan results through this HTTPS origin so browsers can display them in an iframe.
+// Only hosts already present in the scanner's cache can be proxied.
+app.get('/preview', async (req, res) => {
+    try {
+        const target = new URL(req.query.url);
+        if (target.protocol !== 'http:' || !/^\d{1,3}(?:\.\d{1,3}){3}$/.test(target.hostname) || (target.port && target.port !== '80')) {
+            return res.status(400).send('Only scanned HTTP hosts can be previewed.');
+        }
+
+        const [rows] = await db.execute('SELECT open_ip FROM scan_cache');
+        const isScannedHost = rows.some(row => {
+            const hosts = typeof row.open_ip === 'string' ? JSON.parse(row.open_ip) : row.open_ip;
+            return Array.isArray(hosts) && hosts.some(host => {
+                try { return new URL(host.host).hostname === target.hostname; } catch { return false; }
+            });
+        });
+        if (!isScannedHost) return res.status(403).send('Host has not been found by a scan.');
+
+        const upstream = await fetch(target, { signal: AbortSignal.timeout(8000), redirect: 'manual' });
+        if (upstream.status >= 300 && upstream.status < 400) {
+            const location = upstream.headers.get('location');
+            if (location) {
+                const redirectUrl = new URL(location, target);
+                if (redirectUrl.hostname === target.hostname && redirectUrl.protocol === 'http:') {
+                    return res.redirect(302, `/preview?url=${encodeURIComponent(redirectUrl.href)}`);
+                }
+            }
+        }
+
+        const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
+        const body = Buffer.from(await upstream.arrayBuffer());
+        if (body.length > 5 * 1024 * 1024) return res.status(413).send('Preview content is too large.');
+
+        let output = body;
+        if (contentType.includes('text/html') || contentType.includes('text/css')) {
+            const rewrite = value => {
+                try {
+                    const absolute = new URL(value, target);
+                    if (absolute.hostname !== target.hostname || absolute.protocol !== 'http:') return value;
+                    return `/preview?url=${encodeURIComponent(absolute.href)}`;
+                } catch { return value; }
+            };
+            let text = body.toString('utf8');
+            if (contentType.includes('text/html')) {
+                text = text.replace(/\b(href|src|action|poster)=(['"])(.*?)\2/gi, (match, attr, quote, value) => {
+                    if (/^(#|data:|javascript:|mailto:|tel:)/i.test(value)) return match;
+                    return `${attr}=${quote}${rewrite(value)}${quote}`;
+                });
+            } else {
+                text = text.replace(/url\((['"]?)(.*?)\1\)/gi, (match, quote, value) => `url(${quote}${rewrite(value)}${quote})`);
+            }
+            output = Buffer.from(text);
+        }
+
+        res.status(upstream.status).type(contentType).send(output);
+    } catch (error) {
+        console.error('Preview proxy error:', error);
+        res.status(502).send('Could not load this host preview.');
+    }
+});
 
 const error_page = ['404 Not Found', 'Not Found', 'Unauthorized', '403 Forbidden', 'Access forbidden!', '500 - Internal server error.', 'Service Unavailable', '403 - Forbidden: Access is denied.']
 const router_page = ['Login', 'RouterOS', 'F612C', '&#70;&#54;&#56;&#56;']
