@@ -312,6 +312,13 @@ async function saveScanCache(
     if (!ip_range || !open_ip || !open_ssh || !open_ftp || !open_rtsp) {
         return;
     }
+
+    if ([open_ip, open_ssh, open_ftp, open_rtsp].every(
+        results => results.length === 0
+    )) {
+        return;
+    }
+
     await db.execute(
         `
         INSERT INTO scan_cache
