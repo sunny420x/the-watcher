@@ -36,7 +36,7 @@
                 <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')">
                     Include hosts with default page.</label>
                 <label class="filter"><input type="checkbox" id="networkConstellationFilter"
-                        onchange="toggleNetworkConstellation()"> Show network constellation.</label>
+                        onchange="toggleNetworkConstellation()" checked> Show network constellation.</label>
             </div>
             <script>
                 function toggleNetworkConstellation() {
@@ -47,18 +47,19 @@
 
             </script>
         </section>
-        <div id="result">
-        </div>
-        <div id="network-constellation" style="display: none;">
-            <div class="graph-heading">
-                <div><h2>Network constellation</h2><span id="constellation-status">Drag to move · scroll to zoom · click a host to preview</span></div>
-                <div class="constellation-tools">
-                    <button type="button" onclick="networkConstellation.zoomBy(1.2)" aria-label="Zoom in">+</button>
-                    <button type="button" onclick="networkConstellation.zoomBy(1 / 1.2)" aria-label="Zoom out">−</button>
-                    <button type="button" onclick="networkConstellation.resetView()">Reset view</button>
+        <div class="container">
+            <div id="result"></div>
+            <div id="network-constellation">
+                <div class="graph-heading">
+                    <div><h2>Network constellation</h2><span id="constellation-status">Drag to move · scroll to zoom · click a host to preview</span></div>
+                    <div class="constellation-tools">
+                        <button type="button" onclick="networkConstellation.zoomBy(1.2)" aria-label="Zoom in">+</button>
+                        <button type="button" onclick="networkConstellation.zoomBy(1 / 1.2)" aria-label="Zoom out">−</button>
+                        <button type="button" onclick="networkConstellation.resetView()">Reset view</button>
+                    </div>
                 </div>
+                <div id="wrapper"><canvas id="myCanvas" aria-label="Interactive network constellation">Your browser does not support the canvas element.</canvas></div>
             </div>
-            <div id="wrapper"><canvas id="myCanvas" aria-label="Interactive network constellation">Your browser does not support the canvas element.</canvas></div>
         </div>
         <section aria-label="Must-see hosts">
             <div class="must-see">
