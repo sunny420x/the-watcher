@@ -889,7 +889,7 @@ Scanner Results
 
 /* Mobile */
 @media (max-width: 800px) {
-    #result .container {
+    .container {
         flex-direction: column;
     }
     #result .row {
