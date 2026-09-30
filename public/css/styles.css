@@ -322,6 +322,8 @@ h1 em {
 
 #wrapper {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     height: min(680px, 65vh);
     overflow: hidden;
     border: 1px solid var(--line);
@@ -329,6 +331,19 @@ h1 em {
     background: linear-gradient(135deg, rgba(118, 215, 209, .035), rgba(198, 243, 107, .025));
     cursor: grab;
     touch-action: none;
+}
+
+#network-constellation {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+#network-constellation .graph-heading {
+    min-width: 0;
+    max-width: 100%;
 }
 
 .constellation-tools {
@@ -354,6 +369,8 @@ h1 em {
 
 #myCanvas {
     display: block;
+    max-width: 100%;
+    min-width: 0;
     touch-action: none;
 }
 
