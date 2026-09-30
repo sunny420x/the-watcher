@@ -379,6 +379,9 @@ h1 em {
 }
 
 #network-constellation {
+    position: sticky;
+    top: 90px;
+    align-self: flex-start;
     flex: 1 1 100%;
     width: 100%;
     min-width: 0;
@@ -1023,6 +1026,12 @@ Scanner Results
 
     .container {
         flex-direction: column;
+    }
+
+    #network-constellation {
+        position: static;
+        top: auto;
+        align-self: auto;
     }
     #result .row {
         grid-template-columns: 1fr;
