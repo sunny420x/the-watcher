@@ -5,7 +5,7 @@ const app = express()
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser')
-const { exec } = require('child_process');
+const { exec, execFile } = require('child_process');
 const mysql = require('mysql2/promise');
 
 require('dotenv').config();
@@ -558,6 +558,21 @@ app.post('/hosts/must-see', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         res.json({ success: true });
+    });
+});
+
+app.get('/whois/:ip', (req, res) => {
+    const ip = req.params.ip;
+
+    if (!net.isIP(ip)) {
+        return res.status(400).json({ error: 'A valid IP address is required.' });
+    }
+
+    execFile('whois', [ip], { timeout: 15000, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+        if (err) {
+            return res.status(500).json({ error: stderr || err.message });
+        }
+        res.json({ stdout });
     });
 });
 

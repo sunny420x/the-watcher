@@ -364,6 +364,33 @@
                     console.error('Error:', error);
                 });
         }
+
+        function whois(ip) {
+            Swal.fire({
+                title: 'Looking up WHOIS...',
+                didOpen: () => Swal.showLoading(),
+                allowOutsideClick: false
+            });
+
+            fetch('/whois/' + encodeURIComponent(ip))
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'WHOIS lookup failed.');
+                    return data;
+                })
+                .then(data => {
+                    Swal.fire({
+                        title: `WHOIS · ${ip}`,
+                        text: data.stdout || 'No WHOIS data returned.',
+                        width: 800,
+                        confirmButtonText: 'Close'
+                    });
+                })
+                .catch(error => {
+                    Swal.fire({ title: 'WHOIS lookup failed', text: error.message, icon: 'error' });
+                });
+        }
+
         function rtsp(ip) {
             Swal.fire({
                 title: 'Running Nmap...',
