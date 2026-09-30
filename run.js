@@ -309,6 +309,9 @@ async function saveScanCache(
     open_ftp,
     open_rtsp
 ) {
+    if (!ip_range || !open_ip || !open_ssh || !open_ftp || !open_rtsp) {
+        return;
+    }
     await db.execute(
         `
         INSERT INTO scan_cache
