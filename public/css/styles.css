@@ -298,6 +298,7 @@ h1 em {
 
 #result {
     min-height: 100px;
+    min-width: 50%;
     margin-top: 34px;
 }
 
@@ -763,6 +764,9 @@ Scanner Results
 
 /* Mobile */
 @media (max-width: 800px) {
+    #result .container {
+        flex-direction: column;
+    }
     #result .row {
         grid-template-columns: 1fr;
     }
