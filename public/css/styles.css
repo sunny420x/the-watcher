@@ -323,11 +323,43 @@ h1 em {
 #wrapper {
     width: 100%;
     height: min(680px, 65vh);
-    overflow: auto;
+    overflow: hidden;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(118, 215, 209, .035), rgba(198, 243, 107, .025));
-    scrollbar-color: #38523d transparent;
+    cursor: grab;
+    touch-action: none;
+}
+
+.constellation-tools {
+    display: flex;
+    gap: 7px;
+}
+
+.constellation-tools button {
+    min-width: 34px;
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--ink);
+    background: rgba(255, 255, 255, .035);
+    font: 12px "DM Mono", monospace;
+    cursor: pointer;
+}
+
+.constellation-tools button:hover {
+    border-color: rgba(198, 243, 107, .45);
+    background: rgba(198, 243, 107, .08);
+}
+
+#myCanvas {
+    display: block;
+    touch-action: none;
+}
+
+#myCanvas.panning,
+#myCanvas.dragging-node {
+    cursor: grabbing;
 }
 
 .host-preview-popup {

@@ -40,8 +40,9 @@
             </div>
             <script>
                 function toggleNetworkConstellation() {
-                    const networkConstellation = document.getElementById('network-constellation');
-                    networkConstellation.style.display = document.getElementById('networkConstellationFilter').checked ? 'block' : 'none';
+                    const panel = document.getElementById('network-constellation');
+                    panel.style.display = document.getElementById('networkConstellationFilter').checked ? 'block' : 'none';
+                    networkConstellation.resize();
                 }
 
             </script>
@@ -50,9 +51,14 @@
         </div>
         <div id="network-constellation" style="display: none;">
             <div class="graph-heading">
-                <h2>Network constellation</h2><span>live topology / port 80</span>
+                <div><h2>Network constellation</h2><span id="constellation-status">Drag to move · scroll to zoom · click a host to preview</span></div>
+                <div class="constellation-tools">
+                    <button type="button" onclick="networkConstellation.zoomBy(1.2)" aria-label="Zoom in">+</button>
+                    <button type="button" onclick="networkConstellation.zoomBy(1 / 1.2)" aria-label="Zoom out">−</button>
+                    <button type="button" onclick="networkConstellation.resetView()">Reset view</button>
+                </div>
             </div>
-            <div id="wrapper"><canvas id="myCanvas">Your browser does not support the canvas element.</canvas></div>
+            <div id="wrapper"><canvas id="myCanvas" aria-label="Interactive network constellation">Your browser does not support the canvas element.</canvas></div>
         </div>
         <section aria-label="Must-see hosts">
             <div class="must-see">
@@ -109,46 +115,6 @@
         </section>
     </main>
     <script>
-        const canvas = document.getElementById("myCanvas");
-        const ctx = canvas.getContext("2d");
-
-        function resizeCanvas() {
-            canvas.width = canvas.parentElement.clientWidth + canvas.parentElement.clientWidth / 2;
-            canvas.height = canvas.parentElement.clientHeight * 2;
-
-
-            wrapper.scrollLeft = (wrapper.scrollWidth - wrapper.clientWidth) / 2;
-            wrapper.scrollTop = (wrapper.scrollHeight - wrapper.clientHeight) / 2;
-        }
-
-        resizeCanvas();
-        window.addEventListener("resize", resizeCanvas);
-
-        // Function to draw a node (circle)
-        function drawNode(x, y, radius, color, address) {
-            ctx.beginPath(); // Start a new path
-            ctx.arc(x, y, radius, 0, Math.PI * 2, true); // Draw a full circle
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.stroke();
-            ctx.fillStyle = "black";
-            ctx.fillText(address, x - radius + 8, y);
-        }
-
-        // Function to draw a line between two points (x1, y1) and (x2, y2)
-        function drawLine(x1, y1, x2, y2, color, width) {
-            ctx.beginPath();
-            ctx.moveTo(x1, y1); // Move the "pen" to the start point
-            ctx.lineTo(x2, y2); // Draw a line to the end point
-            ctx.strokeStyle = color;
-            ctx.lineWidth = width;
-            ctx.stroke(); // Render the line
-        }
-
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-
         let i = 0
         let range = "<%=query%>"
         let current = parseInt(range.split('.')[2])
@@ -167,56 +133,9 @@
                 }
             }).then(data => {
                 document.getElementById('result').innerHTML = data.html
-                wrapper = document.getElementById('wrapper')
-
-                nodes = []
-
-                sx = canvas.width / 2;
-                sy = canvas.height / 2;
-
-                let centerX = sx;
-                let centerY = sy;
-
-                let baseRadius = 150;     // first ring distance
-                let ringGap = 120;        // space between rings
-                let nodeRadius = 40;
-
-                let nodesPerRing = 12;    // first ring capacity
-                let ring = 0;
-                let indexInRing = 0;
-
-                data.data.open_ip.forEach((node, index) => {
-
-                    if (indexInRing >= nodesPerRing) {
-                        ring++;
-                        indexInRing = 0;
-
-                        // increase capacity as ring grows
-                        nodesPerRing = Math.floor((2 * Math.PI * (baseRadius + ring * ringGap)) / (nodeRadius * 2.5));
-                    }
-
-                    let radius = baseRadius + ring * ringGap;
-                    let angle = (2 * Math.PI / nodesPerRing) * indexInRing;
-
-                    let x = centerX + radius * Math.cos(angle);
-                    let y = centerY + radius * Math.sin(angle);
-
-                    drawLine(centerX, centerY, x, y, "#bbb", 1);
-
-                    drawNode(
-                        x,
-                        y,
-                        nodeRadius,
-                        "#2ecc71",
-                        node.host.replace('http://', '')
-                    );
-
-
-                    indexInRing++;
-                });
-
-                drawNode(centerX, centerY, 50, "#444", range + ".0/24")
+                networkConstellation.render(data.data.open_ip || [], range);
             });
+
         }
 
         function next() {
@@ -233,7 +152,7 @@
             run(range + (current += 1)); document.getElementById('query').value = range + current
             history.pushState(null, null, '/' + range + current);
 
-            clearCanvas();
+            networkConstellation.clear();
             document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
         }
 
@@ -251,7 +170,7 @@
             run(range + (current -= 1)); document.getElementById('query').value = range + current
             history.pushState(null, null, '/' + range + current);
 
-            clearCanvas();
+            networkConstellation.clear();
             document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
         }
 
@@ -416,6 +335,7 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/network-constellation.js"></script>
 </body>
 
 </html>
