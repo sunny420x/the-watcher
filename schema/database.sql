@@ -17,3 +17,21 @@ CREATE TABLE IF NOT EXISTS scan_cache (
 
     INDEX idx_scanned_at (scanned_at)
 );
+
+CREATE TABLE scan_search_index (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    ip_range VARCHAR(15) NOT NULL,
+    host VARCHAR(255) NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    service VARCHAR(16) NOT NULL,
+    port SMALLINT UNSIGNED NOT NULL,
+    title VARCHAR(512) NULL,
+    scanned_at DATETIME NOT NULL,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_range_host_service (ip_range, host, service, port),
+    KEY idx_ip_address (ip_address),
+    KEY idx_host (host),
+    KEY idx_service_port (service, port),
+    KEY idx_scanned_at (scanned_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

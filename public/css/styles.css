@@ -887,8 +887,258 @@ Scanner Results
     text-align: center;
 }
 
+.nav-link {
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--lime);
+    font: 11px "DM Mono", monospace;
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    border-color: rgba(198, 243, 107, .4);
+    background: rgba(198, 243, 107, .06);
+}
+
+.search-page .nav-status .target {
+    display: none;
+}
+
+.search-shell {
+    min-width: 0;
+}
+
+.search-heading {
+    margin-bottom: 30px;
+}
+
+.search-heading .eyebrow {
+    margin-bottom: 13px;
+}
+
+.search-heading h1 {
+    font-size: clamp(36px, 5vw, 64px);
+}
+
+.search-heading > p:last-child {
+    margin: 14px 0 0;
+    color: var(--muted);
+}
+
+.index-search-form {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(140px, 190px) minmax(150px, 220px) auto;
+    align-items: end;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+}
+
+.index-search-form label {
+    display: grid;
+    min-width: 0;
+    gap: 8px;
+    color: var(--muted);
+    font: 10px "DM Mono", monospace;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.index-search-form input,
+.index-search-form select {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    outline: none;
+    color: var(--ink);
+    background: #111a15;
+    font: 12px "DM Mono", monospace;
+    letter-spacing: normal;
+    text-transform: none;
+}
+
+.index-search-form input:focus,
+.index-search-form select:focus {
+    border-color: rgba(198, 243, 107, .55);
+}
+
+.index-search-form select option {
+    color: var(--ink);
+    background: #111a15;
+}
+
+.index-search-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 42px;
+}
+
+.index-search-submit {
+    height: 42px;
+    padding: 0 16px;
+    border: 1px solid var(--lime);
+    border-radius: 7px;
+    color: #17200f;
+    background: var(--lime);
+    font: 500 12px "DM Mono", monospace;
+    cursor: pointer;
+}
+
+.index-search-actions a {
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.index-search-actions a:hover {
+    color: var(--ink);
+}
+
+.index-results {
+    min-width: 0;
+    margin-top: 24px;
+}
+
+.index-results-heading,
+.index-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.index-results-heading {
+    margin-bottom: 12px;
+}
+
+.index-results-heading h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.index-results-heading span,
+.index-pagination span {
+    color: var(--muted);
+    font: 11px "DM Mono", monospace;
+}
+
+.index-empty-state {
+    padding: 32px 20px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    color: var(--muted);
+    font: 12px "DM Mono", monospace;
+    text-align: center;
+}
+
+.index-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+}
+
+.index-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.index-table th {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    color: #87958a;
+    background: rgba(255, 255, 255, .02);
+    font: 10px "DM Mono", monospace;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.index-table td {
+    max-width: 320px;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(205, 234, 201, .07);
+    color: #c7d2c8;
+    font: 11px "DM Mono", monospace;
+    white-space: nowrap;
+}
+
+.index-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.index-table tbody tr:hover {
+    background: rgba(198, 243, 107, .035);
+}
+
+.index-host {
+    color: var(--cyan) !important;
+}
+
+.index-host-link {
+    color: inherit;
+    text-decoration-color: rgba(118, 215, 209, .35);
+    text-underline-offset: 3px;
+}
+
+.index-host-link:hover {
+    color: var(--lime);
+    text-decoration-color: currentColor;
+}
+
+.index-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.service-chip {
+    display: inline-block;
+    min-width: 48px;
+    padding: 4px 6px;
+    border: 1px solid rgba(118, 215, 209, .2);
+    border-radius: 5px;
+    color: var(--cyan);
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.service-ssh { color: #c6f36b; border-color: rgba(198, 243, 107, .22); }
+.service-ftp { color: #f2c879; border-color: rgba(242, 200, 121, .22); }
+.service-rtsp { color: #d8a8ef; border-color: rgba(216, 168, 239, .22); }
+
+.index-pagination {
+    margin-top: 14px;
+}
+
+.index-pagination a {
+    color: var(--lime);
+    font: 11px "DM Mono", monospace;
+    text-decoration: none;
+}
+
+.index-pagination a:hover {
+    text-decoration: underline;
+}
+
 /* Mobile */
 @media (max-width: 800px) {
+    .index-search-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .index-query-field {
+        grid-column: 1 / -1;
+    }
+
     .container {
         flex-direction: column;
     }
@@ -919,6 +1169,14 @@ Scanner Results
 
     .nav-status {
         gap: 12px;
+    }
+
+    .search-page .nav-status .live {
+        display: none;
+    }
+
+    .nav-link {
+        margin-left: auto;
     }
 
     .live {

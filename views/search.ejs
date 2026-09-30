@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Search Network Observations | The Watcher</title>
+    <meta name="description" content="Search observed hosts, services, titles, and subnet ranges in The Watcher network index.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="search-page">
+    <%-include('components/navigator')%>
+    <main class="shell search-shell">
+        <header class="search-heading">
+            <p class="eyebrow">Network intelligence</p>
+            <h1>Search observations</h1>
+            <p>Find hosts and services recorded in the scan index.</p>
+        </header>
+
+        <form class="index-search-form" action="/search" method="get">
+            <label class="index-query-field">
+                <span>Search</span>
+                <input type="search" name="q" value="<%= q %>" placeholder="IP, host, title, or range">
+            </label>
+            <label>
+                <span>Service</span>
+                <select name="service">
+                    <option value="">All services</option>
+                    <% services.forEach(service => { %>
+                        <option value="<%= service %>" <%= selectedService === service ? 'selected' : '' %>><%= service.toUpperCase() %></option>
+                    <% }) %>
+                </select>
+            </label>
+            <label>
+                <span>IP range</span>
+                <select name="ip_range">
+                    <option value="">All ranges</option>
+                    <% ranges.forEach(range => { %>
+                        <option value="<%= range %>" <%= selectedRange === range ? 'selected' : '' %>><%= range %>.0/24</option>
+                    <% }) %>
+                </select>
+            </label>
+            <div class="index-search-actions">
+                <button class="index-search-submit" type="submit">Search</button>
+                <a href="/search">Clear</a>
+            </div>
+        </form>
+
+        <section class="index-results" aria-live="polite">
+            <% if (!hasSearch) { %>
+                <div class="index-empty-state">Enter a search term or choose a filter to explore the index.</div>
+            <% } else if (total === 0) { %>
+                <div class="index-empty-state">No observations match these filters.</div>
+            <% } else { %>
+                <div class="index-results-heading">
+                    <h2>Results</h2>
+                    <span><%= total %> observation<%= total === 1 ? '' : 's' %></span>
+                </div>
+                <div class="index-table-wrap">
+                    <table class="index-table">
+                        <thead>
+                            <tr>
+                                <th>Service</th>
+                                <th>Host</th>
+                                <th>Port</th>
+                                <th>Title</th>
+                                <th>IP range</th>
+                                <th>Last scanned</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% results.forEach(result => { %>
+                                <tr>
+                                    <td><span class="service-chip service-<%= result.service %>"><%= result.service %></span></td>
+                                    <td class="index-host">
+                                        <% if (result.service === 'web') { %>
+                                            <a class="index-host-link" href="<%= result.host %>" target="_blank" rel="noopener noreferrer"><%= result.ip_address || result.host %></a>
+                                        <% } else { %>
+                                            <%= result.ip_address || result.host %>
+                                        <% } %>
+                                    </td>
+                                    <td><%= result.port %></td>
+                                    <td class="index-title"><%= result.title || '—' %></td>
+                                    <td><%= result.ip_range %>.0/24</td>
+                                    <td><%= result.scanned_at %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% if (totalPages > 1) { %>
+                    <nav class="index-pagination" aria-label="Search result pages">
+                        <% if (page > 1) { %>
+                            <a href="/search?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page - 1 %>">Previous</a>
+                        <% } else { %><span></span><% } %>
+                        <span>Page <%= page %> of <%= totalPages %></span>
+                        <% if (page < totalPages) { %>
+                            <a href="/search?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page + 1 %>">Next</a>
+                        <% } else { %><span></span><% } %>
+                    </nav>
+                <% } %>
+            <% } %>
+        </section>
+    </main>
+</body>
+
+</html>

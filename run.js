@@ -319,8 +319,41 @@ async function saveScanCache(
         return;
     }
 
-    await db.execute(
-        `
+    const observations = [];
+
+    open_ip.forEach(result => {
+        if (!result || typeof result.host !== 'string') return;
+        let ip_address = result.host;
+        try {
+            ip_address = new URL(result.host).hostname;
+        } catch { }
+        observations.push([
+            ip_range,
+            result.host,
+            ip_address,
+            'web',
+            80,
+            result.title || null
+        ]);
+    });
+
+    [
+        ['ssh', 22, open_ssh],
+        ['ftp', 21, open_ftp],
+        ['rtsp', 554, open_rtsp]
+    ].forEach(([service, port, hosts]) => {
+        hosts.forEach(host => {
+            if (typeof host !== 'string' || !host) return;
+            observations.push([ip_range, host, host, service, port, null]);
+        });
+    });
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        await connection.execute(
+            `
         INSERT INTO scan_cache
         (
             ip_range,
@@ -338,19 +371,121 @@ async function saveScanCache(
             open_rtsp = VALUES(open_rtsp),
             scanned_at = CURRENT_TIMESTAMP
         `,
-        [
-            ip_range,
-            open_ip.length > 0 ? JSON.stringify(open_ip) : null,
-            open_ssh.length > 0 ? JSON.stringify(open_ssh) : null,
-            open_ftp.length > 0 ? JSON.stringify(open_ftp) : null,
-            open_rtsp.length > 0 ? JSON.stringify(open_rtsp) : null
-        ]
-    );
+            [
+                ip_range,
+                open_ip.length > 0 ? JSON.stringify(open_ip) : null,
+                open_ssh.length > 0 ? JSON.stringify(open_ssh) : null,
+                open_ftp.length > 0 ? JSON.stringify(open_ftp) : null,
+                open_rtsp.length > 0 ? JSON.stringify(open_rtsp) : null
+            ]
+        );
+
+        await connection.execute(
+            'DELETE FROM scan_search_index WHERE ip_range = ?',
+            [ip_range]
+        );
+
+        if (observations.length > 0) {
+            const rowPlaceholders = observations.map(() => '(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
+            const values = observations.flat();
+            await connection.execute(
+                `
+                INSERT INTO scan_search_index
+                    (ip_range, host, ip_address, service, port, title, scanned_at)
+                VALUES ${rowPlaceholders}
+                `,
+                values
+            );
+        }
+
+        await connection.commit();
+    } catch (err) {
+        await connection.rollback();
+        throw err;
+    } finally {
+        connection.release();
+    }
 }
 
 app.get('/', (req, res) => {
     const parts = req.ip.split('.');
     res.redirect(`/${parts[0]}.${parts[1]}.${parts[2]}`);
+});
+
+app.get('/search', async (req, res) => {
+    const services = ['web', 'ssh', 'ftp', 'rtsp'];
+    const selectedService = services.includes(req.query.service) ? req.query.service : '';
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
+    let selectedRange = typeof req.query.ip_range === 'string' ? req.query.ip_range : '';
+    const pageSize = 50;
+    let page = Number.parseInt(req.query.page, 10);
+    if (!Number.isInteger(page) || page < 1) page = 1;
+
+    try {
+        const [rangeRows] = await db.execute(
+            'SELECT DISTINCT ip_range FROM scan_search_index ORDER BY ip_range'
+        );
+        const ranges = rangeRows.map(row => row.ip_range);
+        if (!ranges.includes(selectedRange)) selectedRange = '';
+
+        const conditions = [];
+        const params = [];
+        if (q) {
+            conditions.push('(host LIKE ? OR ip_address LIKE ? OR title LIKE ? OR ip_range LIKE ?)');
+            const pattern = `%${q}%`;
+            params.push(pattern, pattern, pattern, pattern);
+        }
+        if (selectedService) {
+            conditions.push('service = ?');
+            params.push(selectedService);
+        }
+        if (selectedRange) {
+            conditions.push('ip_range = ?');
+            params.push(selectedRange);
+        }
+
+        let results = [];
+        let total = 0;
+        if (conditions.length > 0) {
+            const where = `WHERE ${conditions.join(' AND ')}`;
+            const [[countRow]] = await db.execute(
+                `SELECT COUNT(*) AS total FROM scan_search_index ${where}`,
+                params
+            );
+            total = Number(countRow.total);
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            page = Math.min(page, totalPages);
+
+            const [rows] = await db.execute(
+                `
+                SELECT ip_range, host, ip_address, service, port, title, scanned_at
+                FROM scan_search_index
+                ${where}
+                ORDER BY scanned_at DESC, ip_range, host
+                LIMIT ? OFFSET ?
+                `,
+                [...params, pageSize, (page - 1) * pageSize]
+            );
+            results = rows;
+        }
+
+        res.render('search.ejs', {
+            q,
+            services,
+            selectedService,
+            ranges,
+            selectedRange,
+            results,
+            total,
+            page,
+            pageSize,
+            totalPages: Math.max(1, Math.ceil(total / pageSize)),
+            hasSearch: conditions.length > 0
+        });
+    } catch (err) {
+        console.error('Search page error:', err);
+        res.status(500).send('Could not load search results.');
+    }
 });
 
 app.get('/:range', (req, res) => {
