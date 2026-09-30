@@ -256,6 +256,14 @@ async function scanRTSP(ip_range) {
     return open_ip;
 }
 
+function isValidRangePrefix(ip_range) {
+    if (typeof ip_range !== 'string') return false;
+    const octets = ip_range.split('.');
+    return octets.length === 3 && octets.every(octet =>
+        /^\d{1,3}$/.test(octet) && Number(octet) >= 0 && Number(octet) <= 255
+    );
+}
+
 async function getScanCache(ip_range) {
     const [rows] = await db.execute(
         `
