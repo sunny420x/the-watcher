@@ -35,17 +35,7 @@
             <div style="display: flex; flex-direction: row; gap: 8px;">
                 <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')">
                     Include hosts with default page.</label>
-                <label class="filter"><input type="checkbox" id="networkConstellationFilter"
-                        onchange="toggleNetworkConstellation()" checked> Show network constellation.</label>
             </div>
-            <script>
-                function toggleNetworkConstellation() {
-                    const panel = document.getElementById('network-constellation');
-                    panel.style.display = document.getElementById('networkConstellationFilter').checked ? 'block' : 'none';
-                    networkConstellation.resize();
-                }
-
-            </script>
         </section>
         <div class="container">
             <div id="result"></div>
