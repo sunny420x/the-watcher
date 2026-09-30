@@ -2,7 +2,6 @@ const net = require('net');
 const { URL } = require('url');
 const express = require('express')
 const app = express()
-const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser')
 const { exec, execFile } = require('child_process');
@@ -648,53 +647,6 @@ app.get('/nmap/:ip', (req, res) => {
         res.json({stdout});
     });
 })
-
-app.get('/hosts/must-see', (req, res) => {
-    const filePath = path.join(__dirname, 'must-see.txt');
-    fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) {
-            res.send(err);
-            return;
-        }
-        const lines = data.split('\n').filter(line => line.trim() !== '');
-        res.json({ mustSee: lines });
-    });
-})
-
-app.post('/hosts/must-see', (req, res) => {
-    const filePath = path.join(__dirname, 'must-see.txt');
-    const newLine = req.body.line;
-    if (!newLine) {
-        return res.status(400).json({ error: 'Line is required' });
-    }
-
-    const isUrl = /^https?:\/\//i.test(newLine);
-    const isIPv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(newLine);
-
-    //create must-see.txt file if it doesn't exist
-    if (!fs.existsSync(filePath)) {
-        fs.writeFileSync(filePath, '');
-    }
-    
-    //if read all line in destination and match the new line, then skip appending
-    const existingLines = fs.readFileSync(filePath, 'utf8').split('\n').filter(line => line.trim() !== '');
-    if (existingLines.includes(newLine)) {
-        return res.status(400).json({ error: 'Line already exists' });
-    }
-
-    if (!isUrl && !isIPv4) {
-        return res.status(400).json({
-            error: 'Line must be a valid link or IP address'
-        });
-    }
-
-    fs.appendFile(filePath, newLine + '\n', (err) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        res.json({ success: true });
-    });
-});
 
 app.get('/whois/:ip', (req, res) => {
     const ip = req.params.ip;
