@@ -333,10 +333,10 @@ async function saveScanCache(
         `,
         [
             ip_range,
-            JSON.stringify(open_ip),
-            JSON.stringify(open_ssh),
-            JSON.stringify(open_ftp),
-            JSON.stringify(open_rtsp)
+            open_ip ? JSON.stringify(open_ip) : null,
+            open_ssh ? JSON.stringify(open_ssh) : null,
+            open_ftp ? JSON.stringify(open_ftp) : null,
+            open_rtsp ? JSON.stringify(open_rtsp) : null
         ]
     );
 }
