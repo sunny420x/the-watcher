@@ -3,10 +3,10 @@ CREATE TABLE IF NOT EXISTS scan_cache (
 
     ip_range VARCHAR(15) NOT NULL,
 
-    open_ip JSON NOT NULL,
-    open_ssh JSON NOT NULL,
-    open_ftp JSON NOT NULL,
-    open_rtsp JSON NOT NULL,
+    open_ip JSON NULL,
+    open_ssh JSON NULL,
+    open_ftp JSON NULL,
+    open_rtsp JSON NULL,
 
     scanned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
