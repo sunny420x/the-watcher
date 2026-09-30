@@ -488,23 +488,21 @@ app.get('/search', async (req, res) => {
 });
 
 app.get('/:range', (req, res) => {
-    let ip_range = req.params.range
-    if (ip_range.split(".").length == 3) {
+    const ip_range = req.params.range;
+    if (isValidRangePrefix(ip_range)) {
         res.render('home.ejs', {
             query: ip_range
         })
     } else {
-        res.send("Please enter ip range in this level: 0.0.0 - 255.255.255")
+        res.status(403).render('error.ejs');
     }
 });
 
 app.get('/run/:range', async (req, res) => {
     const ip_range = req.params.range;
 
-    if (ip_range.split(".").length !== 3) {
-        return res.send(
-            "Please enter ip range in this level: 0.0.0 - 255.255.255"
-        );
+    if (!isValidRangePrefix(ip_range)) {
+        return res.status(403).render('error.ejs');
     }
 
     try {

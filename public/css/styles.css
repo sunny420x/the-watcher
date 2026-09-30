@@ -758,6 +758,31 @@ Scanner Results
     background: rgba(198, 243, 107, .06);
 }
 
+.error-page {
+    min-height: 100vh;
+}
+
+.error-shell {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+}
+
+.error-shell p {
+    margin: 0 0 12px;
+    color: var(--lime);
+    font: 12px "DM Mono", monospace;
+    letter-spacing: .18em;
+}
+
+.error-shell h1 {
+    font-size: clamp(42px, 8vw, 76px);
+}
+
 .search-page .nav-status .target {
     display: none;
 }

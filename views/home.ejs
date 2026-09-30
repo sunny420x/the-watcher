@@ -90,11 +90,18 @@
             const requestId = ++scanRequestId
             clearTimeout(seekTimer)
 
-            fetch(`/run/${range}`).then(res => {
+            fetch(`/run/${range}`).then(async res => {
+                if (res.status === 403) {
+                    const errorPage = await res.text()
+                    document.open()
+                    document.write(errorPage)
+                    document.close()
+                    return null
+                }
                 if (!res.ok) throw new Error(`Scan failed (${res.status})`)
                 return res.json()
             }).then(data => {
-                if (requestId !== scanRequestId) return
+                if (!data || requestId !== scanRequestId) return
                 const resultLists = [data.data.open_ip, data.data.open_ssh, data.data.open_ftp, data.data.open_rtsp]
                 const isEmpty = resultLists.every(results => !Array.isArray(results) || results.length === 0)
                 if (isEmpty && seekActive) {
