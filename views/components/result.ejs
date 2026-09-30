@@ -1,8 +1,12 @@
 <div class="d-flex flex-wrap mt-4">
+    <% open_ip = open_ip || []; %>
+    <% open_ftp = open_ftp || []; %>
+    <% open_ssh = open_ssh || []; %>
+    <% open_rtsp = open_rtsp || []; %>
     <% if(open_ip.length == 0 && open_ftp.length == 0 && open_ssh.length == 0 && open_rtsp.length == 0) { %>
         Not found.
     <%}%>
-    <% if(open_ip) { %>
+    <% if(open_ip.length > 0) { %>
     <div>
         <h2><span class="badge bg-primary"><%=open_ip.length%></span> Web servers</h2>
         <div class="overflow-auto" style="max-height: 500px;">
