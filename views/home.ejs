@@ -108,6 +108,9 @@
         let range = "<%=query%>"
         let current = parseInt(range.split('.')[2])
         range = range.split('.')[0] + '.' + range.split('.')[1] + '.'
+        let seekActive = true
+        let scanRequestId = 0
+        let seekTimer = null
 
         const loadingSkeleton = `<div class="skeleton-results" role="status" aria-label="Scanning network">
             <span class="visually-hidden">Scanning network…</span>
@@ -126,20 +129,46 @@
         </div>`
 
         function run(range) {
+            const requestId = ++scanRequestId
+            clearTimeout(seekTimer)
+
             fetch(`/run/${range}`).then(res => {
-                if (res.ok) {
-                    return res.json()
-                } else {
-                    return "Error"
-                }
+                if (!res.ok) throw new Error(`Scan failed (${res.status})`)
+                return res.json()
             }).then(data => {
+                if (requestId !== scanRequestId) return
                 document.getElementById('result').innerHTML = data.html
                 networkConstellation.render(data.data.open_ip || [], range);
+
+                const resultLists = [data.data.open_ip, data.data.open_ssh, data.data.open_ftp, data.data.open_rtsp]
+                const isEmpty = resultLists.every(results => !Array.isArray(results) || results.length === 0)
+                if (isEmpty && seekActive) {
+                    Swal.fire({
+                        toast: true,
+                        position: 'bottom-end',
+                        icon: 'info',
+                        title: `Nothing found in ${range}; seeking next subnet`,
+                        showConfirmButton: false,
+                        timer: 1800,
+                        timerProgressBar: false,
+                        background: '#17211b',
+                        color: '#dce8dc'
+                    })
+                    seekTimer = setTimeout(() => next(true), 900)
+                } else {
+                    seekActive = false
+                }
+            }).catch(error => {
+                if (requestId === scanRequestId) {
+                    seekActive = false
+                    console.error('Network scan failed:', error)
+                }
             });
 
         }
 
-        function next() {
+        function next(isSeeking = false) {
+            if (!isSeeking) seekActive = true
             if (parseInt(range.split('.')[1]) + 1 == 256 && current + 1 == 256) {
                 current = 0
                 range = parseInt(range.split('.')[0]) + 1 + '.' + '0.';
@@ -158,6 +187,7 @@
         }
 
         function back() {
+            seekActive = true
             if (parseInt(range.split('.')[1]) - 1 == -1) {
                 current = 256
                 range = parseInt(range.split('.')[0]) - 1 + '.' + '255.';
@@ -176,6 +206,7 @@
         }
 
         function initField() {
+            seekActive = true
             document.getElementById('result').innerHTML = loadingSkeleton
 
             document.getElementById('query').value = range + current
@@ -184,6 +215,7 @@
         }
 
         function search(value) {
+            seekActive = true
             document.getElementById('result').innerHTML = loadingSkeleton
             run(value);
             range = value.split('.')[0] + '.' + value.split('.')[1] + '.';
