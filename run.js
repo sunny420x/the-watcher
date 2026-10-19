@@ -325,19 +325,56 @@ async function getScanQueueStatus() {
     return {
         activeScanRange,
         pendingScanRange: pendingScanRanges.keys().next().value || null,
-        jobs: rows.map(row => ({
-            ...row,
-            total_ranges: Number(row.total_ranges),
-            completed_ranges: Number(row.completed_ranges)
-        }))
+        jobs: rows.map(row => {
+            const totalRanges = Number(row.total_ranges);
+            let completedRanges = Math.max(0, Math.min(totalRanges, Number(row.completed_ranges)));
+            const current = parseSubnetPrefix(row.current_range);
+            if (row.status === 'running' && current && current.basePrefix === row.base_prefix) {
+                const rangesBeforeCurrent = Math.max(0, current.thirdOctet - Number(row.start_range.split('.')[2]));
+                completedRanges = Math.min(totalRanges, rangesBeforeCurrent);
+            }
+            return { ...row, total_ranges: totalRanges, completed_ranges: completedRanges };
+        })
     };
+}
+
+async function recoverInterruptedScanJobs() {
+    const [jobs] = await db.execute(`
+        SELECT id, base_prefix, start_range, total_ranges, completed_ranges, current_range
+        FROM scan_queue_jobs
+        WHERE status = 'running'
+    `);
+
+    for (const job of jobs) {
+        const totalRanges = Number(job.total_ranges);
+        let completedRanges = Math.max(0, Math.min(totalRanges, Number(job.completed_ranges)));
+        const current = parseSubnetPrefix(job.current_range);
+        if (current && current.basePrefix === job.base_prefix) {
+            completedRanges = Math.max(0, current.thirdOctet - Number(job.start_range.split('.')[2]));
+        }
+
+        await db.execute(`
+            UPDATE scan_queue_jobs
+            SET status = 'queued', completed_ranges = ?, current_range = NULL, error_message = NULL
+            WHERE id = ? AND status = 'running'
+        `, [Math.min(totalRanges, completedRanges), job.id]);
+    }
 }
 
 async function runScanQueueWorker() {
     if (scanQueueWorkerRunning) return;
     scanQueueWorkerRunning = true;
+    let lockConnection;
+    let workerLockAcquired = false;
 
     try {
+        lockConnection = await db.getConnection();
+        const [[lock]] = await lockConnection.query("SELECT GET_LOCK('watcher_scan_queue_worker', 0) AS acquired");
+        workerLockAcquired = Number(lock.acquired) === 1;
+        if (!workerLockAcquired) return;
+
+        await recoverInterruptedScanJobs();
+
         while (true) {
             const [jobs] = await db.execute(`
                 SELECT id, base_prefix, start_octet, end_octet, completed_ranges
@@ -373,7 +410,7 @@ async function runScanQueueWorker() {
                     if (result.skipped) console.log(`[QUEUE SKIP] ${ip_range} already has scan data`);
                     await db.execute(`
                         UPDATE scan_queue_jobs
-                        SET completed_ranges = completed_ranges + 1,
+                        SET completed_ranges = LEAST(completed_ranges + 1, total_ranges),
                             current_range = NULL
                         WHERE id = ? AND status = 'running'
                     `, [job.id]);
@@ -400,7 +437,19 @@ async function runScanQueueWorker() {
     } catch (error) {
         console.error('Scan queue worker error:', error);
     } finally {
+        if (lockConnection) {
+            if (workerLockAcquired) {
+                try { await lockConnection.query("SELECT RELEASE_LOCK('watcher_scan_queue_worker')"); } catch (error) {
+                    console.error('Could not release scan queue worker lock:', error);
+                }
+            }
+            lockConnection.release();
+        }
         scanQueueWorkerRunning = false;
+        if (!workerLockAcquired) {
+            setTimeout(() => runScanQueueWorker(), 5000);
+            return;
+        }
         try {
             const [pendingJobs] = await db.execute("SELECT id FROM scan_queue_jobs WHERE status = 'queued' LIMIT 1");
             if (pendingJobs.length > 0) setImmediate(() => runScanQueueWorker());
@@ -835,11 +884,6 @@ app.get('/whois/:ip', (req, res) => {
 async function startServer() {
     try {
         await syncDatabaseSchema(db, path.join(__dirname, 'schema/database.sql'));
-        await db.execute(`
-            UPDATE scan_queue_jobs
-            SET status = 'queued', current_range = NULL, error_message = NULL
-            WHERE status = 'running'
-        `);
     } catch (error) {
         console.error('Could not migrate the database schema:', error);
         await db.end();

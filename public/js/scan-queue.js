@@ -24,6 +24,20 @@
         return ({ queued: 'Queued', running: 'Scanning', completed: 'Completed', failed: 'Failed' })[status] || status;
     }
 
+    function completedCount(job, total) {
+        let completed = Math.max(0, Math.min(total, Number(job.completed_ranges) || 0));
+        if (job.status === 'running' && job.current_range) {
+            const startOctet = Number(String(job.start_range).split('.')[2]);
+            const startParts = String(job.start_range).split('.');
+            const currentParts = String(job.current_range).split('.');
+            const currentOctet = Number(currentParts[2]);
+            if (currentParts.length === 3 && currentParts[0] === startParts[0] && currentParts[1] === startParts[1] && Number.isInteger(startOctet) && Number.isInteger(currentOctet)) {
+                completed = Math.min(total, Math.max(0, currentOctet - startOctet));
+            }
+        }
+        return completed;
+    }
+
     function renderActive(data) {
         const activeJob = data.jobs.find(job => ['queued', 'running'].includes(job.status));
         const currentlyScanning = data.activeScanRange || data.pendingScanRange;
@@ -41,10 +55,10 @@
         }
 
         const total = Number(activeJob.total_ranges) || 0;
-        const completed = Number(activeJob.completed_ranges) || 0;
-        const percent = total ? Math.min(100, Math.round(completed / total * 100)) : 0;
+        const completed = completedCount(activeJob, total);
         const isRunning = activeJob.status === 'running';
-        const current = currentlyScanning || activeJob.current_range;
+        const percent = total ? Math.min(isRunning ? 99 : 100, Math.round(completed / total * 100)) : 0;
+        const current = activeJob.current_range || currentlyScanning;
         activeContainer.innerHTML = `
             <div class="queue-job-summary">
                 <span class="queue-status-badge status-${escapeHtml(activeJob.status)}">${escapeHtml(statusLabel(activeJob.status))}</span>
@@ -62,7 +76,7 @@
         }
         historyContainer.innerHTML = jobs.map(job => {
             const total = Number(job.total_ranges) || 0;
-            const completed = Number(job.completed_ranges) || 0;
+            const completed = completedCount(job, total);
             const error = job.error_message ? `<p class="queue-job-error">${escapeHtml(job.error_message)}</p>` : '';
             return `<article class="queue-history-row">
                 <div class="queue-history-main">
