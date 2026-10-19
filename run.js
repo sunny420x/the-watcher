@@ -6,6 +6,7 @@ const path = require('path');
 const bodyParser = require('body-parser')
 const { exec, execFile } = require('child_process');
 const mysql = require('mysql2/promise');
+const { syncDatabaseSchema } = require('./schema/migrate');
 
 require('dotenv').config();
 
@@ -19,6 +20,21 @@ const db = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 });
+
+let scanQueueWorkerRunning = false;
+let activeScanRange = null;
+const pendingScanRanges = new Map();
+let scanTaskChain = Promise.resolve();
+
+function markScanPending(ip_range) {
+    pendingScanRanges.set(ip_range, (pendingScanRanges.get(ip_range) || 0) + 1);
+}
+
+function unmarkScanPending(ip_range) {
+    const count = pendingScanRanges.get(ip_range) || 0;
+    if (count <= 1) pendingScanRanges.delete(ip_range);
+    else pendingScanRanges.set(ip_range, count - 1);
+}
 
 
 app.set('views', path.join(__dirname, 'views'))
@@ -206,7 +222,7 @@ async function findRTSP(ip) {
 async function scanWebServer(ip_range) {
     const open_ip_promises = [];
 
-    for (let i = 0; i < 255; i++) {
+    for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         const web_server = findWebServer(ip);
         open_ip_promises.push(web_server);
@@ -220,7 +236,7 @@ async function scanWebServer(ip_range) {
 async function scanSSH(ip_range) {
     const open_ip_promises = [];
 
-    for (let i = 0; i < 255; i++) {
+    for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         open_ip_promises.push(findSSH(ip));
     }
@@ -233,7 +249,7 @@ async function scanSSH(ip_range) {
 async function scanFTP(ip_range) {
     const open_ip_promises = [];
 
-    for (let i = 0; i < 255; i++) {
+    for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         open_ip_promises.push(findFTP(ip));
     }
@@ -246,7 +262,7 @@ async function scanFTP(ip_range) {
 async function scanRTSP(ip_range) {
     const open_ip_promises = [];
 
-    for (let i = 0; i < 255; i++) {
+    for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         open_ip_promises.push(findRTSP(ip));
     }
@@ -254,6 +270,131 @@ async function scanRTSP(ip_range) {
     const results = await Promise.all(open_ip_promises);
     const open_ip = results.filter(Boolean);
     return open_ip;
+}
+
+function withExclusiveScan(ip_range, task) {
+    markScanPending(ip_range);
+    const result = scanTaskChain.then(async () => {
+        unmarkScanPending(ip_range);
+        activeScanRange = ip_range;
+        try {
+            return await task();
+        } finally {
+            activeScanRange = null;
+        }
+    });
+    scanTaskChain = result.catch(() => {});
+    return result;
+}
+
+async function performScan(ip_range) {
+    const open_ip = await scanWebServer(ip_range);
+    const open_ssh = await scanSSH(ip_range);
+    const open_ftp = await scanFTP(ip_range);
+    const open_rtsp = await scanRTSP(ip_range);
+
+    await saveScanCache(ip_range, open_ip, open_ssh, open_ftp, open_rtsp);
+    return { open_ip, open_ssh, open_ftp, open_rtsp };
+}
+
+function parseSubnetPrefix(value) {
+    if (typeof value !== 'string') return null;
+    const octets = value.split('.');
+    if (octets.length !== 3 || !octets.every(octet => /^\d{1,3}$/.test(octet))) return null;
+    const numbers = octets.map(Number);
+    if (numbers.some(octet => octet < 0 || octet > 255)) return null;
+    return { basePrefix: `${numbers[0]}.${numbers[1]}`, thirdOctet: numbers[2] };
+}
+
+async function getScanQueueStatus() {
+    const [rows] = await db.execute(`
+        SELECT id, base_prefix, start_range, end_range, current_range, status,
+               total_ranges, completed_ranges, error_message, created_at,
+               started_at, finished_at
+        FROM scan_queue_jobs
+        ORDER BY id DESC
+        LIMIT 25
+    `);
+    return {
+        activeScanRange,
+        pendingScanRange: pendingScanRanges.keys().next().value || null,
+        jobs: rows.map(row => ({
+            ...row,
+            total_ranges: Number(row.total_ranges),
+            completed_ranges: Number(row.completed_ranges)
+        }))
+    };
+}
+
+async function runScanQueueWorker() {
+    if (scanQueueWorkerRunning) return;
+    scanQueueWorkerRunning = true;
+
+    try {
+        while (true) {
+            const [jobs] = await db.execute(`
+                SELECT id, base_prefix, start_octet, end_octet, completed_ranges
+                FROM scan_queue_jobs
+                WHERE status = 'queued'
+                ORDER BY id ASC
+                LIMIT 1
+            `);
+            if (jobs.length === 0) break;
+
+            const job = jobs[0];
+            const [claim] = await db.execute(`
+                UPDATE scan_queue_jobs
+                SET status = 'running', started_at = COALESCE(started_at, CURRENT_TIMESTAMP), error_message = NULL
+                WHERE id = ? AND status = 'queued'
+            `, [job.id]);
+            if (claim.affectedRows !== 1) continue;
+
+            let failed = false;
+            for (let octet = Number(job.start_octet) + Number(job.completed_ranges); octet <= Number(job.end_octet); octet++) {
+                const ip_range = `${job.base_prefix}.${octet}`;
+                try {
+                    await db.execute(
+                        'UPDATE scan_queue_jobs SET current_range = ? WHERE id = ? AND status = \'running\'',
+                        [ip_range, job.id]
+                    );
+                    await withExclusiveScan(ip_range, () => performScan(ip_range));
+                    await db.execute(`
+                        UPDATE scan_queue_jobs
+                        SET completed_ranges = completed_ranges + 1,
+                            current_range = NULL
+                        WHERE id = ? AND status = 'running'
+                    `, [job.id]);
+                } catch (error) {
+                    failed = true;
+                    console.error(`Queued scan failed for ${ip_range}:`, error);
+                    await db.execute(`
+                        UPDATE scan_queue_jobs
+                        SET status = 'failed', current_range = ?, error_message = ?, finished_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                    `, [ip_range, String(error.message || error).slice(0, 4000), job.id]);
+                    break;
+                }
+            }
+
+            if (!failed) {
+                await db.execute(`
+                    UPDATE scan_queue_jobs
+                    SET status = 'completed', current_range = NULL, finished_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND status = 'running'
+                `, [job.id]);
+            }
+        }
+    } catch (error) {
+        console.error('Scan queue worker error:', error);
+    } finally {
+        scanQueueWorkerRunning = false;
+        try {
+            const [pendingJobs] = await db.execute("SELECT id FROM scan_queue_jobs WHERE status = 'queued' LIMIT 1");
+            if (pendingJobs.length > 0) setImmediate(() => runScanQueueWorker());
+        } catch (error) {
+            console.error('Could not resume pending scan queue jobs:', error);
+        }
+    }
 }
 
 function isValidRangePrefix(ip_range) {
@@ -495,6 +636,82 @@ app.get('/search', async (req, res) => {
     }
 });
 
+app.get('/scan-queue', (req, res) => {
+    res.render('scan-queue.ejs');
+});
+
+app.get('/api/scan-queue', async (req, res) => {
+    try {
+        res.json(await getScanQueueStatus());
+    } catch (error) {
+        console.error('Could not load scan queue:', error);
+        res.status(500).json({ error: 'Could not load the scan queue.' });
+    }
+});
+
+app.post('/api/scan-queue', async (req, res) => {
+    const start = parseSubnetPrefix(req.body?.start_range);
+    const end = parseSubnetPrefix(req.body?.end_range);
+    if (!start || !end) {
+        return res.status(400).json({ error: 'Enter valid subnet prefixes, for example 192.168.0.' });
+    }
+    if (start.basePrefix !== end.basePrefix) {
+        return res.status(400).json({ error: 'Start and end must share the same first two octets.' });
+    }
+    if (end.thirdOctet < start.thirdOctet) {
+        return res.status(400).json({ error: 'The end subnet must be the same as or after the start subnet.' });
+    }
+
+    let connection;
+    let lockAcquired = false;
+    try {
+        connection = await db.getConnection();
+        const [[lock]] = await connection.query("SELECT GET_LOCK('watcher_scan_queue_enqueue', 5) AS acquired");
+        lockAcquired = Number(lock.acquired) === 1;
+        if (!lockAcquired) {
+            return res.status(503).json({ error: 'The scan queue is busy. Please try again shortly.' });
+        }
+
+        if (activeScanRange || pendingScanRanges.size > 0) {
+            const range = activeScanRange || pendingScanRanges.keys().next().value;
+            return res.status(409).json({ error: `A scan is already running or starting${range ? ` for ${range}` : ''}.` });
+        }
+
+        const [activeJobs] = await connection.execute(`
+            SELECT id FROM scan_queue_jobs
+            WHERE status IN ('queued', 'running')
+            LIMIT 1
+        `);
+        if (activeJobs.length > 0) {
+            return res.status(409).json({ error: 'A scan job is already active. Wait for it to finish before adding another.' });
+        }
+
+        const startRange = `${start.basePrefix}.${start.thirdOctet}`;
+        const endRange = `${end.basePrefix}.${end.thirdOctet}`;
+        const totalRanges = end.thirdOctet - start.thirdOctet + 1;
+        const [insert] = await connection.execute(`
+            INSERT INTO scan_queue_jobs
+                (base_prefix, start_octet, end_octet, start_range, end_range, total_ranges)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [start.basePrefix, start.thirdOctet, end.thirdOctet, startRange, endRange, totalRanges]);
+
+        res.status(202).json({ id: insert.insertId, message: 'Scan range added.' });
+        setImmediate(() => runScanQueueWorker());
+    } catch (error) {
+        console.error('Could not add scan range:', error);
+        if (!res.headersSent) res.status(500).json({ error: 'Could not add the scan range.' });
+    } finally {
+        if (connection) {
+            if (lockAcquired) {
+                try { await connection.query("SELECT RELEASE_LOCK('watcher_scan_queue_enqueue')"); } catch (error) {
+                    console.error('Could not release scan queue lock:', error);
+                }
+            }
+            connection.release();
+        }
+    }
+});
+
 app.get('/:range', (req, res) => {
     const ip_range = req.params.range;
     if (isValidRangePrefix(ip_range)) {
@@ -514,101 +731,35 @@ app.get('/run/:range', async (req, res) => {
     }
 
     try {
-        const cached = await getScanCache(ip_range);
-
-        if (cached) {
-
-            console.log(`[CACHE] ${ip_range}`);
-
-            return res.render(
-                'components/result.ejs',
-                {
-                    open_ip: cached.open_ip,
-                    open_ssh: cached.open_ssh,
-                    open_ftp: cached.open_ftp,
-                    open_rtsp: cached.open_rtsp,
-                    filter,
-
-                    cached: true,
-                    scanned_at: cached.scanned_at
-                },
-                (err, html) => {
-
-                    if (err) {
-                        return res.status(500).json({
-                            error: err.message
-                        });
-                    }
-
-                    res.json({
-                        html: html,
-
-                        data: {
-                            open_ip: cached.open_ip,
-                            open_ssh: cached.open_ssh,
-                            open_ftp: cached.open_ftp,
-                            open_rtsp: cached.open_rtsp,
-                            filter,
-
-                            cached: true,
-                            scanned_at: cached.scanned_at
-                        }
-                    });
-                }
-            );
-        }
-
-        console.log(`[SCAN] ${ip_range}`);
-
-        const open_ip = await scanWebServer(ip_range);
-        const open_ssh = await scanSSH(ip_range);
-        const open_ftp = await scanFTP(ip_range);
-        const open_rtsp = await scanRTSP(ip_range);
-
-        await saveScanCache(
-            ip_range,
-            open_ip,
-            open_ssh,
-            open_ftp,
-            open_rtsp
-        );
-
-        res.render(
-            'components/result.ejs',
-            {
-                open_ip,
-                open_ssh,
-                open_ftp,
-                open_rtsp,
-                filter,
-
-                cached: false,
-                scanned_at: new Date()
-            },
-            (err, html) => {
-
-                if (err) {
-                    return res.status(500).json({
-                        error: err.message
-                    });
-                }
-
-                res.json({
-                    html: html,
-
+        const payload = await withExclusiveScan(ip_range, async () => {
+            const cached = await getScanCache(ip_range);
+            if (cached) {
+                console.log(`[CACHE] ${ip_range}`);
+                return {
                     data: {
-                        open_ip,
-                        open_ssh,
-                        open_ftp,
-                        open_rtsp,
+                        open_ip: cached.open_ip,
+                        open_ssh: cached.open_ssh,
+                        open_ftp: cached.open_ftp,
+                        open_rtsp: cached.open_rtsp,
                         filter,
-
-                        cached: false,
-                        scanned_at: new Date()
+                        cached: true,
+                        scanned_at: cached.scanned_at
                     }
-                });
+                };
             }
-        );
+
+            console.log(`[SCAN] ${ip_range}`);
+            const results = await performScan(ip_range);
+            return { data: { ...results, filter, cached: false, scanned_at: new Date() } };
+        });
+
+        const html = await new Promise((resolve, reject) => {
+            res.render('components/result.ejs', { ...payload.data, filter }, (error, output) => {
+                if (error) reject(error);
+                else resolve(output);
+            });
+        });
+        res.json({ html, data: payload.data });
 
     } catch (err) {
         console.error(err);
@@ -618,41 +769,30 @@ app.get('/run/:range', async (req, res) => {
     }
 });
 
-app.get('/rtsp/:ip', (req, res) => {
-    let ip = req.params.ip
+function runNmap(ip, args) {
+    return withExclusiveScan(ip, () => new Promise((resolve, reject) => {
+        execFile('nmap', [...args, ip], { timeout: 120000, maxBuffer: 4 * 1024 * 1024 }, (error, stdout, stderr) => {
+            if (error) return reject(new Error(stderr || error.message));
+            resolve(stdout);
+        });
+    }));
+}
 
-    exec('nmap --script rtsp-url-brute -p 554 ' + ip, (err, stdout, stderr) => {
-        if (err) {
-            res.send(err);
-            return;
-        }
-        res.json({stdout});
-    });
-})
+async function handleNmapRequest(req, res, args) {
+    const ip = req.params.ip;
+    if (net.isIP(ip) !== 4) {
+        return res.status(400).json({ error: 'A valid IPv4 address is required.' });
+    }
+    try {
+        res.json({ stdout: await runNmap(ip, args) });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
 
-app.get('/ftp/:ip', (req, res) => {
-    let ip = req.params.ip
-
-    exec('nmap --script ftp-brute -p 21 ' + ip, (err, stdout, stderr) => {
-        if (err) {
-            res.send(err);
-            return;
-        }
-        res.json({stdout});
-    });
-})
-
-app.get('/nmap/:ip', (req, res) => {
-    let ip = req.params.ip
-
-    exec('nmap -sV -sC ' + ip, (err, stdout, stderr) => {
-        if (err) {
-            res.send(err);
-            return;
-        }
-        res.json({stdout});
-    });
-})
+app.get('/rtsp/:ip', (req, res) => handleNmapRequest(req, res, ['--script', 'rtsp-url-brute', '-p', '554']));
+app.get('/ftp/:ip', (req, res) => handleNmapRequest(req, res, ['--script', 'ftp-brute', '-p', '21']));
+app.get('/nmap/:ip', (req, res) => handleNmapRequest(req, res, ['-sV', '-sC']));
 
 app.get('/whois/:ip', (req, res) => {
     const ip = req.params.ip;
@@ -669,6 +809,25 @@ app.get('/whois/:ip', (req, res) => {
     });
 });
 
-app.listen(4004, () => {
-    console.log('[+] The Watcher is listening on port http://localhost:4004')
-});
+async function startServer() {
+    try {
+        await syncDatabaseSchema(db, path.join(__dirname, 'schema/database.sql'));
+        await db.execute(`
+            UPDATE scan_queue_jobs
+            SET status = 'queued', current_range = NULL, error_message = NULL
+            WHERE status = 'running'
+        `);
+    } catch (error) {
+        console.error('Could not migrate the database schema:', error);
+        await db.end();
+        process.exitCode = 1;
+        return;
+    }
+
+    app.listen(4004, () => {
+        console.log('[+] The Watcher is listening on port http://localhost:4004');
+        runScanQueueWorker();
+    });
+}
+
+startServer();

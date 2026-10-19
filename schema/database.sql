@@ -35,3 +35,24 @@ CREATE TABLE scan_search_index (
     KEY idx_service_port (service, port),
     KEY idx_scanned_at (scanned_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS scan_queue_jobs (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    base_prefix VARCHAR(7) NOT NULL,
+    start_octet TINYINT UNSIGNED NOT NULL,
+    end_octet TINYINT UNSIGNED NOT NULL,
+    start_range VARCHAR(15) NOT NULL,
+    end_range VARCHAR(15) NOT NULL,
+    current_range VARCHAR(15) NULL,
+    status ENUM('queued', 'running', 'completed', 'failed') NOT NULL DEFAULT 'queued',
+    total_ranges SMALLINT UNSIGNED NOT NULL,
+    completed_ranges SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    error_message TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    started_at DATETIME NULL,
+    finished_at DATETIME NULL,
+
+    PRIMARY KEY (id),
+    KEY idx_scan_queue_status_created (status, created_at),
+    KEY idx_scan_queue_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

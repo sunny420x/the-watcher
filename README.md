@@ -18,5 +18,10 @@ Accessing web interface at this URL:
 http://localhost:4002
 </pre>
 
+## Database schema updates
+On startup, The Watcher reads `schema/database.sql`, compares its tables, columns, indexes, engine, and character set with MySQL, and applies compatible changes before accepting requests. The current schema snapshot and migration history are stored in `schema_migration_state` and `schema_migration_history`.
+
+Columns removed from `database.sql` are preserved to avoid deleting stored data; the migration logs a warning for those columns. Column, index, or table changes that MySQL cannot apply are recorded as failed migrations and prevent the server from starting until the schema issue is resolved.
+
 # Discovering building in dark forest is kinda.. fun!
 In the watcher, you can scan services from all over the world ! it's like walking through the jungle and discovering what is "awake".

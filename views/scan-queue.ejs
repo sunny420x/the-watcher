@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Subnet scan queue | The Watcher</title>
+    <meta name="description" content="Run subnet scans in the background and track progress across a subnet range.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="queue-page">
+    <%-include('components/navigator')%>
+    <main class="shell queue-shell">
+        <header class="search-heading">
+            <p class="eyebrow">Background scanner</p>
+            <h1>Subnet scan queue</h1>
+            <p>Scan subnet ranges in the background and track progress even when you leave this page.</p>
+        </header>
+
+        <section class="queue-panel" aria-labelledby="queue-form-title">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow">New scan range</p>
+                    <h2 id="queue-form-title">Set a subnet range</h2>
+                </div>
+                <span class="queue-mode">ONE JOB AT A TIME</span>
+            </div>
+            <p class="queue-help">Enter the first and last subnet prefixes, for example <code>192.168.0</code> to <code>192.168.255</code>. The scanner checks each /24 in order (hosts <code>.0–.255</code> in each subnet) and saves results to the same database as regular scans.</p>
+            <form id="queue-form" class="queue-form">
+                <label>
+                    <span>First subnet</span>
+                    <input type="text" name="start_range" inputmode="decimal" placeholder="192.168.0" autocomplete="off" required>
+                </label>
+                <span class="queue-range-arrow" aria-hidden="true">→</span>
+                <label>
+                    <span>Last subnet</span>
+                    <input type="text" name="end_range" inputmode="decimal" placeholder="192.168.255" autocomplete="off" required>
+                </label>
+                <button id="queue-submit" type="submit">Start scan</button>
+            </form>
+            <p id="queue-message" class="queue-message" role="status" aria-live="polite">Enter three-octet subnet prefixes with the same first two octets.</p>
+        </section>
+
+        <section class="queue-panel queue-status-panel" aria-labelledby="queue-status-title">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow">Live status</p>
+                    <h2 id="queue-status-title">Scan status</h2>
+                </div>
+                <span id="queue-refresh-status" class="queue-refresh-status">Connecting…</span>
+            </div>
+            <div id="queue-active" class="queue-active" aria-live="polite">
+                <div class="queue-empty-state">No active scan job.</div>
+            </div>
+        </section>
+
+        <section class="queue-panel" aria-labelledby="queue-history-title">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow">Recent jobs</p>
+                    <h2 id="queue-history-title">Scan history</h2>
+                </div>
+            </div>
+            <div id="queue-history" class="queue-history">
+                <div class="queue-empty-state">Loading scan history…</div>
+            </div>
+        </section>
+    </main>
+    <script src="/js/scan-queue.js"></script>
+</body>
+
+</html>
