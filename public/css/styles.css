@@ -80,38 +80,6 @@ input {
     text-transform: uppercase;
 }
 
-/* Right side */
-
-.nav-status {
-    display: flex;
-    align-items: center;
-    gap: 28px;
-}
-
-/* Current target */
-
-.target {
-    padding-left: 20px;
-    border-left: 1px solid var(--line);
-}
-
-.target span {
-    display: block;
-
-    color: #667268;
-    font: 9px "DM Mono", monospace;
-    letter-spacing: .1em;
-}
-
-.target strong {
-    display: block;
-    margin-top: 5px;
-
-    color: var(--ink);
-    font: 12px "DM Mono", monospace;
-    font-weight: 400;
-}
-
 .eyebrow {
     margin: 0 0 12px;
     color: var(--lime);
