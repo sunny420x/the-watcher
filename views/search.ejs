@@ -21,7 +21,7 @@
             <p>Find hosts and services recorded in the scan index.</p>
         </header>
 
-        <form class="index-search-form" action="/search" method="get">
+        <form class="index-search-form" action="/" method="get">
             <label class="index-query-field">
                 <span>Search</span>
                 <input type="search" name="q" value="<%= q %>" placeholder="IP, host, title, or range">
@@ -46,7 +46,7 @@
             </label>
             <div class="index-search-actions">
                 <button class="index-search-submit" type="submit">Search</button>
-                <a href="/search">Clear</a>
+                <a href="/">Clear</a>
             </div>
         </form>
 
@@ -95,11 +95,11 @@
                 <% if (totalPages > 1) { %>
                     <nav class="index-pagination" aria-label="Search result pages">
                         <% if (page > 1) { %>
-                            <a href="/search?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page - 1 %>">Previous</a>
+                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page - 1 %>">Previous</a>
                         <% } else { %><span></span><% } %>
                         <span>Page <%= page %> of <%= totalPages %></span>
                         <% if (page < totalPages) { %>
-                            <a href="/search?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page + 1 %>">Next</a>
+                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page + 1 %>">Next</a>
                         <% } else { %><span></span><% } %>
                     </nav>
                 <% } %>

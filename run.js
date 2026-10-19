@@ -418,6 +418,11 @@ function isValidRangePrefix(ip_range) {
     );
 }
 
+function getClientIPv4(req) {
+    const address = typeof req.ip === 'string' ? req.ip.replace(/^::ffff:/i, '') : '';
+    return net.isIPv4(address) ? address : '127.0.0.1';
+}
+
 async function getScanCache(ip_range) {
     const [rows] = await db.execute(
         `
@@ -568,12 +573,7 @@ async function saveScanCache(
     }
 }
 
-app.get('/', (req, res) => {
-    const parts = req.ip.split('.');
-    res.redirect(`/${parts[0]}.${parts[1]}.${parts[2]}`);
-});
-
-app.get('/search', async (req, res) => {
+async function renderSearchPage(req, res) {
     const services = ['web', 'ssh', 'ftp', 'rtsp'];
     const selectedService = services.includes(req.query.service) ? req.query.service : '';
     const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
@@ -647,6 +647,16 @@ app.get('/search', async (req, res) => {
         console.error('Search page error:', err);
         res.status(500).send('Could not load search results.');
     }
+}
+
+app.get('/', renderSearchPage);
+app.get('/search', renderSearchPage);
+
+app.get('/take-a-walk', (req, res) => {
+    const parts = getClientIPv4(req).split('.');
+    res.render('home.ejs', {
+        query: `${parts[0]}.${parts[1]}.${parts[2]}`
+    });
 });
 
 app.get('/scan-queue', (req, res) => {
@@ -725,8 +735,8 @@ app.post('/api/scan-queue', async (req, res) => {
     }
 });
 
-app.get('/:range', (req, res) => {
-    const ip_range = req.params.range;
+app.get(/^\/(\d{1,3}\.\d{1,3}\.\d{1,3})$/, (req, res) => {
+    const ip_range = req.params[0];
     if (isValidRangePrefix(ip_range)) {
         res.render('home.ejs', {
             query: ip_range
