@@ -297,6 +297,13 @@ async function performScan(ip_range) {
     return { open_ip, open_ssh, open_ftp, open_rtsp };
 }
 
+function hasCachedScanData(cached) {
+    if (!cached) return false;
+    return ['open_ip', 'open_ssh', 'open_ftp', 'open_rtsp'].some(service =>
+        Array.isArray(cached[service]) && cached[service].length > 0
+    );
+}
+
 function parseSubnetPrefix(value) {
     if (typeof value !== 'string') return null;
     const octets = value.split('.');
@@ -357,7 +364,13 @@ async function runScanQueueWorker() {
                         'UPDATE scan_queue_jobs SET current_range = ? WHERE id = ? AND status = \'running\'',
                         [ip_range, job.id]
                     );
-                    await withExclusiveScan(ip_range, () => performScan(ip_range));
+                    const result = await withExclusiveScan(ip_range, async () => {
+                        const cached = await getScanCache(ip_range);
+                        if (hasCachedScanData(cached)) return { skipped: true };
+                        await performScan(ip_range);
+                        return { skipped: false };
+                    });
+                    if (result.skipped) console.log(`[QUEUE SKIP] ${ip_range} already has scan data`);
                     await db.execute(`
                         UPDATE scan_queue_jobs
                         SET completed_ranges = completed_ranges + 1,
