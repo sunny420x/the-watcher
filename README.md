@@ -1,4 +1,4 @@
-# The Watcher, Small but powerfull Network Intelligence.
+# The Watcher, Small but powerfull Cyberspace search engine.
 <img width="1902" height="897" alt="Screenshot 2569-09-23 at 23 16 17" src="https://github.com/user-attachments/assets/45571410-1d1b-45a4-ba61-0c7de459b4e9" />
 
 ## What is the watcher ?
