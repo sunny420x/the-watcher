@@ -23,7 +23,10 @@
         const toggle = document.querySelector('.theme-toggle');
         if (toggle) {
             const nextTheme = theme === 'light' ? 'dark' : 'light';
-            toggle.textContent = nextTheme === 'light' ? 'Light' : 'Dark';
+            const sunIcon = toggle.querySelector('.theme-icon-sun');
+            const moonIcon = toggle.querySelector('.theme-icon-moon');
+            if (sunIcon) sunIcon.hidden = nextTheme !== 'light';
+            if (moonIcon) moonIcon.hidden = nextTheme !== 'dark';
             toggle.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
             toggle.setAttribute('aria-pressed', String(theme === 'light'));
         }
