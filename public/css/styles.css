@@ -1119,6 +1119,43 @@ Scanner Results
     max-width: 1240px;
 }
 
+.summary-shell .search-heading > p:last-of-type {
+    margin: 14px 0 0;
+    color: var(--muted);
+}
+
+.summary-heading-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.summary-cache-status {
+    color: var(--muted);
+    font: 10px "DM Mono", monospace;
+}
+
+.summary-refresh-form {
+    margin: 0;
+}
+
+.summary-refresh-button {
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid var(--lime);
+    border-radius: 7px;
+    color: var(--button-ink);
+    background: var(--lime);
+    font: 500 11px "DM Mono", monospace;
+    cursor: pointer;
+}
+
+.summary-refresh-button:hover {
+    filter: brightness(1.08);
+}
+
 .summary-metrics {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));

@@ -26,6 +26,8 @@ let scanQueueWorkerRunning = false;
 let activeScanRange = null;
 const pendingScanRanges = new Map();
 let scanTaskChain = Promise.resolve();
+let scanSummaryCache = null;
+let scanSummaryRefreshPromise = null;
 
 function markScanPending(ip_range) {
     pendingScanRanges.set(ip_range, (pendingScanRanges.get(ip_range) || 0) + 1);
@@ -705,8 +707,7 @@ async function renderSearchPage(req, res) {
     }
 }
 
-async function renderScanSummary(req, res) {
-    try {
+async function buildScanSummary() {
         const [[stats]] = await db.execute(`
             SELECT
                 COUNT(DISTINCT COALESCE(ip_address, host)) AS total_ips,
@@ -779,11 +780,31 @@ async function renderScanSummary(req, res) {
             right.ipCount - left.ipCount || left.priority - right.priority || left.category.localeCompare(right.category)
         );
 
-        res.render('summary.ejs', {
+        return {
             stats: Object.fromEntries(Object.entries(stats).map(([key, value]) => [key, Number(value)])),
             categoryRows,
-            keywordRows
-        });
+            keywordRows,
+            summarizedAt: new Date()
+        };
+}
+
+async function refreshScanSummary() {
+    if (scanSummaryRefreshPromise) return scanSummaryRefreshPromise;
+
+    const refreshPromise = buildScanSummary();
+    scanSummaryRefreshPromise = refreshPromise;
+    try {
+        scanSummaryCache = await refreshPromise;
+        return scanSummaryCache;
+    } finally {
+        if (scanSummaryRefreshPromise === refreshPromise) scanSummaryRefreshPromise = null;
+    }
+}
+
+async function renderScanSummary(req, res) {
+    try {
+        const summary = scanSummaryCache || await refreshScanSummary();
+        res.render('summary.ejs', summary);
     } catch (error) {
         console.error('Scan summary page error:', error);
         res.status(500).send('Could not load the scan summary.');
@@ -794,6 +815,16 @@ app.get('/', renderSearchPage);
 app.get('/search', renderSearchPage);
 
 app.get('/summary', renderScanSummary);
+
+app.post('/summary/refresh', async (req, res) => {
+    try {
+        await refreshScanSummary();
+        res.redirect(303, '/summary');
+    } catch (error) {
+        console.error('Could not refresh the scan summary:', error);
+        res.status(500).send('Could not refresh the scan summary.');
+    }
+});
 
 app.get('/take-a-walk', (req, res) => {
     const parts = getClientIPv4(req).split('.');

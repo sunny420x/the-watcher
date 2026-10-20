@@ -20,6 +20,12 @@
             <p class="eyebrow">Network intelligence</p>
             <h1>Scan summary</h1>
             <p>Overview of the hosts and services currently recorded in the scan index.</p>
+            <div class="summary-heading-actions">
+                <span class="summary-cache-status">Cached at <%= summarizedAt.toLocaleString() %></span>
+                <form class="summary-refresh-form" method="post" action="/summary/refresh">
+                    <button class="summary-refresh-button" type="submit">Re-summarize</button>
+                </form>
+            </div>
         </header>
 
         <section class="summary-metrics" aria-label="Scan totals">
