@@ -32,7 +32,7 @@
         'Error Page': 'หน้าแจ้งข้อผิดพลาด',
         'CCTV Page': 'หน้ากล้องวงจรปิด',
         'Directory Listing': 'หน้าแสดงรายการไฟล์',
-        'Other Web Page': 'หน้าเว็บไซต์อื่น',
+        'Other Web Page': 'เว็บไซต์ทั่วไป',
         'No Title': 'ไม่มี Title',
         'DEFAULT': 'หน้าเริ่มต้น',
         'CCTV': 'กล้องวงจรปิด',
