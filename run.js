@@ -705,8 +705,95 @@ async function renderSearchPage(req, res) {
     }
 }
 
+async function renderScanSummary(req, res) {
+    try {
+        const [[stats]] = await db.execute(`
+            SELECT
+                COUNT(DISTINCT COALESCE(ip_address, host)) AS total_ips,
+                COUNT(DISTINCT ip_range) AS ranges_with_findings,
+                COUNT(DISTINCT CASE WHEN service = 'web' THEN COALESCE(ip_address, host) END) AS web_ips,
+                COUNT(DISTINCT CASE WHEN service = 'ssh' THEN COALESCE(ip_address, host) END) AS ssh_ips,
+                COUNT(DISTINCT CASE WHEN service = 'ftp' THEN COALESCE(ip_address, host) END) AS ftp_ips,
+                COUNT(DISTINCT CASE WHEN service = 'rtsp' THEN COALESCE(ip_address, host) END) AS rtsp_ips
+            FROM scan_search_index
+        `);
+        const [keywordRows] = await db.execute(`
+            SELECT keyword, category, match_priority
+            FROM scan_title_keywords
+            ORDER BY match_priority, keyword
+        `);
+
+        const keywordGroups = new Map();
+        const categoryPriorities = new Map();
+        keywordRows.forEach(row => {
+            if (!keywordGroups.has(row.category)) keywordGroups.set(row.category, []);
+            keywordGroups.get(row.category).push(row.keyword);
+            if (!categoryPriorities.has(row.category)) {
+                categoryPriorities.set(row.category, Number(row.match_priority));
+            }
+        });
+
+        const keywordCases = keywordRows.map(() =>
+            "WHEN LOCATE(?, LOWER(COALESCE(title, ''))) > 0 THEN ?"
+        ).join('\n');
+        const classificationCase = `CASE ${keywordCases}
+            WHEN title IS NULL OR TRIM(title) = '' THEN 1000
+            ELSE 900
+        END`;
+        const keywordParams = keywordRows.flatMap(row => [
+            String(row.keyword).toLowerCase(),
+            Number(row.match_priority)
+        ]);
+        const [categoryCountRows] = await db.execute(`
+            SELECT classified.category_priority, COUNT(*) AS ip_count
+            FROM (
+                SELECT
+                    COALESCE(ip_address, host) AS ip_address,
+                    MIN(${classificationCase}) AS category_priority
+                FROM scan_search_index
+                WHERE service = 'web'
+                GROUP BY COALESCE(ip_address, host)
+            ) AS classified
+            GROUP BY classified.category_priority
+        `, keywordParams);
+
+        const countsByPriority = new Map(categoryCountRows.map(row => [
+            Number(row.category_priority),
+            Number(row.ip_count)
+        ]));
+        const categoryRows = [...categoryPriorities.entries()].map(([category, priority]) => ({
+            category,
+            priority,
+            keywords: keywordGroups.get(category) || [],
+            ipCount: countsByPriority.get(priority) || 0
+        }));
+        [
+            { category: 'Other Web Page', priority: 900 },
+            { category: 'No Title', priority: 1000 }
+        ].forEach(({ category, priority }) => {
+            const ipCount = countsByPriority.get(priority) || 0;
+            if (ipCount > 0) categoryRows.push({ category, priority, keywords: [], ipCount });
+        });
+
+        categoryRows.sort((left, right) =>
+            right.ipCount - left.ipCount || left.priority - right.priority || left.category.localeCompare(right.category)
+        );
+
+        res.render('summary.ejs', {
+            stats: Object.fromEntries(Object.entries(stats).map(([key, value]) => [key, Number(value)])),
+            categoryRows,
+            keywordRows
+        });
+    } catch (error) {
+        console.error('Scan summary page error:', error);
+        res.status(500).send('Could not load the scan summary.');
+    }
+}
+
 app.get('/', renderSearchPage);
 app.get('/search', renderSearchPage);
+
+app.get('/summary', renderScanSummary);
 
 app.get('/take-a-walk', (req, res) => {
     const parts = getClientIPv4(req).split('.');

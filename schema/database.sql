@@ -36,6 +36,18 @@ CREATE TABLE scan_search_index (
     KEY idx_scanned_at (scanned_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS scan_title_keywords (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    keyword VARCHAR(255) NOT NULL,
+    category VARCHAR(80) NOT NULL,
+    match_priority SMALLINT UNSIGNED NOT NULL DEFAULT 100,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_scan_title_keyword (keyword),
+    KEY idx_scan_title_keyword_category (category, match_priority)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS scan_queue_jobs (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     base_prefix VARCHAR(7) NOT NULL,

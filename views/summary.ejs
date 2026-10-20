@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Scan Summary | The Watcher</title>
+    <meta name="description" content="Summarize discovered IPs and web page titles across recorded network scans.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/js/theme.js"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="summary-page">
+    <%- include('components/navigator') %>
+    <main class="shell summary-shell">
+        <header class="search-heading">
+            <p class="eyebrow">Network intelligence</p>
+            <h1>Scan summary</h1>
+            <p>Overview of the hosts and services currently recorded in the scan index.</p>
+        </header>
+
+        <section class="summary-metrics" aria-label="Scan totals">
+            <article class="summary-metric">
+                <span>Unique IPs</span>
+                <strong><%= stats.total_ips.toLocaleString('en-US') %></strong>
+            </article>
+            <article class="summary-metric">
+                <span>Subnet ranges with findings</span>
+                <strong><%= stats.ranges_with_findings.toLocaleString('en-US') %></strong>
+            </article>
+            <article class="summary-metric">
+                <span>Web IPs</span>
+                <strong><%= stats.web_ips.toLocaleString('en-US') %></strong>
+            </article>
+            <article class="summary-metric">
+                <span>SSH IPs</span>
+                <strong><%= stats.ssh_ips.toLocaleString('en-US') %></strong>
+            </article>
+            <article class="summary-metric">
+                <span>FTP IPs</span>
+                <strong><%= stats.ftp_ips.toLocaleString('en-US') %></strong>
+            </article>
+            <article class="summary-metric">
+                <span>RTSP IPs</span>
+                <strong><%= stats.rtsp_ips.toLocaleString('en-US') %></strong>
+            </article>
+        </section>
+
+        <section class="queue-panel summary-panel" aria-labelledby="summary-web-title">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow">Website titles</p>
+                    <h2 id="summary-web-title">Web IPs by page type</h2>
+                </div>
+                <span class="queue-mode">CASE INSENSITIVE MATCH</span>
+            </div>
+            <% if (stats.web_ips === 0) { %>
+                <div class="index-empty-state">No web hosts have been recorded yet.</div>
+            <% } else { %>
+                <div class="index-table-wrap">
+                    <table class="index-table summary-table">
+                        <thead>
+                            <tr>
+                                <th>Page type</th>
+                                <th>Title keywords</th>
+                                <th>IPs</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% categoryRows.forEach(row => { %>
+                                <tr>
+                                    <td><strong><%= row.category %></strong></td>
+                                    <td class="summary-keyword-cell">
+                                        <% if (row.keywords.length > 0) { %>
+                                            <div class="summary-keywords">
+                                                <% row.keywords.forEach(keyword => { %>
+                                                    <span class="summary-keyword"><%= keyword %></span>
+                                                <% }) %>
+                                            </div>
+                                        <% } else { %>
+                                            <span class="summary-muted">No title keyword matched</span>
+                                        <% } %>
+                                    </td>
+                                    <td class="summary-ip-count"><%= row.ipCount.toLocaleString('en-US') %> IPs</td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+            <p class="summary-note">Each IP is counted once. When a title matches more than one keyword, the category with the highest match priority is used.</p>
+        </section>
+    </main>
+</body>
+
+</html>
