@@ -75,3 +75,10 @@ CREATE TABLE IF NOT EXISTS scan_summary_refresh (
 
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS app_data_migrations (
+    migration_name VARCHAR(128) NOT NULL,
+    applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (migration_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

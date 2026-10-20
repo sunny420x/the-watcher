@@ -14,25 +14,9 @@
                 <th colspan="2" data-en-text="Action" data-th-text="การทำงาน">Action</th>
             </tr>
             <% if(open_ip.length != 0) { %>
-                <% 
-                let hiddenTypes = ['DEFAULT', 'CCTV', 'ROUTER', 'ERROR']
-                const classify = (title = '') => {
-                    if (filter.error_page.some(p => title.includes(p))) return 'ERROR';
-                    if (filter.cctv_page.some(p => title.includes(p))) return 'CCTV';
-                    if (filter.router_page.some(p => title.includes(p))) return 'ROUTER';
-                    if (filter.default_webserver_page.some(p => title.includes(p))) return 'DEFAULT';
-                    if (filter.directory_listing.some(p => title.includes(p))) return 'DIRECTORY';
-                    if (filter.pornography.some(p => title.includes(p))) return 'Pornography';
-                    return 'OPEN PORT';
-                };
-                
-                open_ip = open_ip.map(ip => ({
-                    ...ip,
-                    type: classify(ip.title || '')
-                }));
                 open_ip.forEach(ip => { 
                     %>
-                    <tr <% if(hiddenTypes.includes(ip.type)) {%>class="hidden"<%}%> >
+                    <tr <% if(ip.hidden_by_default) {%>class="hidden"<%}%> >
                         <td data-category-label="<%= ip.type %>"><%=ip.type%></td>
                         <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
                         <td><button onclick="nmap('<%=ip.host.slice(7)%>')">Nmap</button> <button onclick="whois('<%=ip.host.slice(7)%>')">WHOIS</button></td>

@@ -1,5 +1,6 @@
 const net = require('net');
 const { URL } = require('url');
+const fs = require('fs/promises');
 const express = require('express')
 const app = express()
 const path = require('path');
@@ -22,6 +23,12 @@ const db = mysql.createPool({
 });
 const MAX_SEARCH_TITLE_LENGTH = 512;
 const NEGATIVE_SCAN_CACHE_TTL_DAYS = 7;
+const HIDDEN_BY_DEFAULT_CATEGORIES = new Set([
+    'default', 'default page',
+    'cctv', 'cctv page',
+    'router', 'router page', 'login page',
+    'error', 'error page'
+]);
 
 let scanQueueWorkerRunning = false;
 let activeScanRange = null;
@@ -108,19 +115,6 @@ app.get('/preview', async (req, res) => {
         res.status(502).send('Could not load this host preview.');
     }
 });
-
-const error_page = ['404 Not Found', 'Not Found', 'Unauthorized', '403 Forbidden', 'Access forbidden!', '500 - Internal server error.', 'Service Unavailable', '403 - Forbidden: Access is denied.']
-const router_page = ['Login', 'RouterOS', 'F612C', '&#70;&#54;&#56;&#56;']
-const cctv_page = ['WEB SERVICE', 'WEB']
-const directory_listing = ['Index of', '/']
-const error = ['error', 'not found', 'unauthorized', 'forbidden']
-const nsfw = ['adult', 'porn', 'xxx', 'sex', 'nsfw']
-const default_webserver_page = ['IIS Windows', 'IIS Windows Server', 'Test Page for the Apache HTTP Server on Fedora Core', 'Success!',
-    'Welcome to nginx!', 'Default Site', 'Test Page for the HTTP Server on AlmaLinux', 'Apache2 Ubuntu Default Page: It works', "Web Server's Default Page", 'Welcome to XAMPP', 'Apache HTTP']
-
-let filter = {
-    error_page, router_page, cctv_page, directory_listing, default_webserver_page, error, nsfw
-}
 
 function scanPort(host, port) {
     return new Promise((resolve) => {
@@ -307,6 +301,29 @@ function isReusableScanCache(cached) {
         Array.isArray(cached[service]) && cached[service].length > 0
     );
     return hasFindings || Boolean(cached.negative_cache_valid);
+}
+
+async function getScanTitleKeywords() {
+    const [rows] = await db.execute(`
+        SELECT keyword, category, match_priority
+        FROM scan_title_keywords
+        WHERE TRIM(keyword) <> '' AND TRIM(category) <> ''
+        ORDER BY match_priority, keyword
+    `);
+    return rows;
+}
+
+function classifyWebTitle(title, keywordRows) {
+    const normalizedTitle = String(title || '').toLowerCase();
+    for (const row of keywordRows) {
+        const keyword = String(row.keyword || '').toLowerCase();
+        if (keyword && normalizedTitle.includes(keyword)) return row.category;
+    }
+    return normalizedTitle.trim() ? 'Other Web Page' : 'No Title';
+}
+
+function isHiddenByDefaultCategory(category) {
+    return HIDDEN_BY_DEFAULT_CATEGORIES.has(String(category || '').trim().toLowerCase());
 }
 
 function parseSubnetPrefix(value) {
@@ -702,11 +719,7 @@ async function buildScanSummary() {
                 COUNT(DISTINCT CASE WHEN service = 'rtsp' THEN COALESCE(ip_address, host) END) AS rtsp_ips
             FROM scan_search_index
         `);
-        const [keywordRows] = await db.execute(`
-            SELECT keyword, category, match_priority
-            FROM scan_title_keywords
-            ORDER BY match_priority, keyword
-        `);
+        const keywordRows = await getScanTitleKeywords();
 
         const categoryPriorities = new Map();
         keywordRows.forEach(row => {
@@ -718,41 +731,46 @@ async function buildScanSummary() {
         const keywordCases = keywordRows.map(() =>
             "WHEN LOCATE(?, LOWER(COALESCE(title, ''))) > 0 THEN ?"
         ).join('\n');
+        const noTitleRank = keywordRows.length;
+        const otherTitleRank = noTitleRank + 1;
         const classificationCase = `CASE ${keywordCases}
-            WHEN title IS NULL OR TRIM(title) = '' THEN 1000
-            ELSE 900
+            WHEN title IS NULL OR TRIM(title) = '' THEN ${noTitleRank}
+            ELSE ${otherTitleRank}
         END`;
-        const keywordParams = keywordRows.flatMap(row => [
-            String(row.keyword).toLowerCase(),
-            Number(row.match_priority)
+        const keywordParams = keywordRows.flatMap((row, rank) => [
+            String(row.keyword).toLowerCase(), rank
         ]);
         const [categoryCountRows] = await db.execute(`
-            SELECT classified.category_priority, COUNT(*) AS ip_count
+            SELECT classified.category_rank, COUNT(*) AS ip_count
             FROM (
                 SELECT
                     COALESCE(ip_address, host) AS ip_address,
-                    MIN(${classificationCase}) AS category_priority
+                    MIN(${classificationCase}) AS category_rank
                 FROM scan_search_index
                 WHERE service = 'web'
                 GROUP BY COALESCE(ip_address, host)
             ) AS classified
-            GROUP BY classified.category_priority
+            GROUP BY classified.category_rank
         `, keywordParams);
 
-        const countsByPriority = new Map(categoryCountRows.map(row => [
-            Number(row.category_priority),
-            Number(row.ip_count)
-        ]));
+        const categoryByRank = new Map(keywordRows.map((row, rank) => [rank, row.category]));
+        categoryByRank.set(noTitleRank, 'No Title');
+        categoryByRank.set(otherTitleRank, 'Other Web Page');
+        const countsByCategory = new Map();
+        categoryCountRows.forEach(row => {
+            const category = categoryByRank.get(Number(row.category_rank));
+            if (category) countsByCategory.set(category, (countsByCategory.get(category) || 0) + Number(row.ip_count));
+        });
         const categoryRows = [...categoryPriorities.entries()].map(([category, priority]) => ({
             category,
             priority,
-            ipCount: countsByPriority.get(priority) || 0
+            ipCount: countsByCategory.get(category) || 0
         }));
         [
-            { category: 'Other Web Page', priority: 900 },
-            { category: 'No Title', priority: 1000 }
+            { category: 'Other Web Page', priority: otherTitleRank },
+            { category: 'No Title', priority: noTitleRank }
         ].forEach(({ category, priority }) => {
-            const ipCount = countsByPriority.get(priority) || 0;
+            const ipCount = countsByCategory.get(category) || 0;
             if (ipCount > 0) categoryRows.push({ category, priority, ipCount });
         });
 
@@ -952,7 +970,6 @@ app.get('/run/:range', async (req, res) => {
                         open_ssh: cached.open_ssh,
                         open_ftp: cached.open_ftp,
                         open_rtsp: cached.open_rtsp,
-                        filter,
                         cached: true,
                         scanned_at: cached.scanned_at
                     }
@@ -961,11 +978,17 @@ app.get('/run/:range', async (req, res) => {
 
             console.log(`[SCAN] ${ip_range}`);
             const results = await performScan(ip_range);
-            return { data: { ...results, filter, cached: false, scanned_at: new Date() } };
+            return { data: { ...results, cached: false, scanned_at: new Date() } };
+        });
+
+        const titleKeywords = await getScanTitleKeywords();
+        payload.data.open_ip = (payload.data.open_ip || []).map(host => {
+            const type = classifyWebTitle(host.title, titleKeywords);
+            return { ...host, type, hidden_by_default: isHiddenByDefaultCategory(type) };
         });
 
         const html = await new Promise((resolve, reject) => {
-            res.render('components/result.ejs', { ...payload.data, filter }, (error, output) => {
+            res.render('components/result.ejs', { ...payload.data }, (error, output) => {
                 if (error) reject(error);
                 else resolve(output);
             });
@@ -1023,8 +1046,9 @@ app.get('/whois/:ip', (req, res) => {
 async function startServer() {
     try {
         await syncDatabaseSchema(db, path.join(__dirname, 'schema/database.sql'));
+        await applyLegacyTitleKeywordMigration();
     } catch (error) {
-        console.error('Could not migrate the database schema:', error);
+        console.error('Could not migrate the database:', error);
         await db.end();
         process.exitCode = 1;
         return;
@@ -1034,6 +1058,50 @@ async function startServer() {
         console.log('[+] The Watcher is listening on port http://localhost:4004');
         runScanQueueWorker();
     });
+}
+
+async function applyLegacyTitleKeywordMigration() {
+    const migrationName = '001_legacy_title_keywords';
+    const connection = await db.getConnection();
+    let lockAcquired = false;
+    let transactionStarted = false;
+
+    try {
+        const [[lock]] = await connection.query("SELECT GET_LOCK('watcher_title_keyword_data_migration', 30) AS acquired");
+        lockAcquired = Number(lock.acquired) === 1;
+        if (!lockAcquired) throw new Error('Timed out waiting for the title keyword data migration lock.');
+
+        const [appliedRows] = await connection.execute(
+            'SELECT migration_name FROM app_data_migrations WHERE migration_name = ?',
+            [migrationName]
+        );
+        if (appliedRows.length > 0) return;
+
+        const migrationSql = await fs.readFile(
+            path.join(__dirname, 'schema/migrations/001_legacy_title_keywords.sql'),
+            'utf8'
+        );
+        await connection.beginTransaction();
+        transactionStarted = true;
+        await connection.query(migrationSql);
+        await connection.execute(
+            'INSERT INTO app_data_migrations (migration_name) VALUES (?)',
+            [migrationName]
+        );
+        await connection.commit();
+        transactionStarted = false;
+        console.log('[DATA MIGRATION] Imported legacy title keywords into scan_title_keywords.');
+    } catch (error) {
+        if (transactionStarted) await connection.rollback().catch(() => {});
+        throw error;
+    } finally {
+        if (lockAcquired) {
+            try { await connection.query("SELECT RELEASE_LOCK('watcher_title_keyword_data_migration')"); } catch (error) {
+                console.error('[DATA MIGRATION] Could not release title keyword migration lock:', error);
+            }
+        }
+        connection.release();
+    }
 }
 
 startServer();

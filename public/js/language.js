@@ -29,9 +29,11 @@
     const categoryNames = {
         'Default Page': 'หน้าเริ่มต้น',
         'Login Page': 'หน้าเข้าสู่ระบบ',
+        'Router Page': 'หน้าเราเตอร์',
         'Error Page': 'หน้าแจ้งข้อผิดพลาด',
         'CCTV Page': 'หน้ากล้องวงจรปิด',
         'Directory Listing': 'หน้าแสดงรายการไฟล์',
+        'Adult Content': 'เนื้อหาสำหรับผู้ใหญ่',
         'Other Web Page': 'เว็บไซต์ทั่วไป',
         'No Title': 'ไม่มี Title',
         'DEFAULT': 'หน้าเริ่มต้น',
