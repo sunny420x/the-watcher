@@ -54,6 +54,8 @@ html[lang="th"] body :not(svg):not(canvas) {
 
 body {
     min-width: 320px;
+    min-height: 100vh;
+    min-height: 100dvh;
     margin: 0;
     color: var(--ink);
     background: radial-gradient(circle at 75% 0%, var(--bg-glow) 0, transparent 32%), var(--bg);
