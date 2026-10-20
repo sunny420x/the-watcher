@@ -1,6 +1,6 @@
 (() => {
     const themeStorageKey = 'the-watcher-theme';
-    let savedTheme = 'dark';
+    let savedTheme = 'light';
 
     try {
         const storedTheme = localStorage.getItem(themeStorageKey);
@@ -17,7 +17,7 @@
 
         const themeColor = document.querySelector('meta[name="theme-color"]');
         if (themeColor) {
-            themeColor.content = theme === 'light' ? '#f4f7f1' : '#0b100e';
+            themeColor.content = theme === 'light' ? '#ffffff' : '#0b100e';
         }
 
         const toggle = document.querySelector('.theme-toggle');
