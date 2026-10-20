@@ -1680,3 +1680,7 @@ html[data-theme="light"] .skeleton-block {
         grid-template-columns: 1fr;
     }
 }
+
+html[lang="th"] h1 {
+    letter-spacing: normal;
+}

@@ -804,8 +804,8 @@ async function getScanSummaryRefreshAvailableAt() {
     `);
     const [[row]] = await db.execute(`
         SELECT
-            UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 7 DAY)) * 1000 AS available_at_ms,
-            DATE_ADD(refreshed_at, INTERVAL 7 DAY) > CURRENT_TIMESTAMP AS is_locked
+            UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 1 DAY)) * 1000 AS available_at_ms,
+            DATE_ADD(refreshed_at, INTERVAL 1 DAY) > CURRENT_TIMESTAMP AS is_locked
         FROM scan_summary_refresh
         WHERE id = 1
     `);
@@ -843,8 +843,8 @@ app.post('/summary/refresh', async (req, res) => {
         `);
         const [[row]] = await connection.execute(`
             SELECT
-                UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 7 DAY)) * 1000 AS available_at_ms,
-                DATE_ADD(refreshed_at, INTERVAL 7 DAY) > CURRENT_TIMESTAMP AS is_locked
+                UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 1 DAY)) * 1000 AS available_at_ms,
+                DATE_ADD(refreshed_at, INTERVAL 1 DAY) > CURRENT_TIMESTAMP AS is_locked
             FROM scan_summary_refresh
             WHERE id = 1
             FOR UPDATE
