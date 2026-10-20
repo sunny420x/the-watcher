@@ -18,7 +18,7 @@
         <header class="search-heading">
             <p class="eyebrow">Background scanner</p>
             <h1>Subnet scan queue</h1>
-            <p>Scan subnet ranges in the background and track progress even when you leave this page.</p>
+            <p>Add subnet ranges to the background queue. The scanner handles one job at a time and starts the next job automatically.</p>
         </header>
 
         <section class="queue-panel" aria-labelledby="queue-form-title">
@@ -27,9 +27,9 @@
                     <p class="eyebrow">New scan range</p>
                     <h2 id="queue-form-title">Set a subnet range</h2>
                 </div>
-                <span class="queue-mode">ONE JOB AT A TIME</span>
+                <span class="queue-mode">ONE SCAN AT A TIME</span>
             </div>
-            <p class="queue-help">Enter the first and last subnet prefixes, for example <code>192.168.0</code> to <code>192.168.255</code>. The scanner checks each /24 in order (hosts <code>.0–.255</code> in each subnet) and saves results to the same database as regular scans.</p>
+            <p class="queue-help">Enter the first and last subnet prefixes, for example <code>192.168.0</code> to <code>192.168.255</code>. Each /24 is scanned in order (hosts <code>.0–.255</code>). You can add another range while a job is running; it will wait its turn.</p>
             <form id="queue-form" class="queue-form">
                 <label>
                     <span>First subnet</span>
@@ -40,9 +40,9 @@
                     <span>Last subnet</span>
                     <input type="text" name="end_range" inputmode="decimal" placeholder="192.168.255" autocomplete="off" required>
                 </label>
-                <button id="queue-submit" type="submit">Start scan</button>
+                <button id="queue-submit" type="submit">Add to queue</button>
             </form>
-            <p id="queue-message" class="queue-message" role="status" aria-live="polite">Enter three-octet subnet prefixes with the same first two octets.</p>
+            <p id="queue-message" class="queue-message" role="status" aria-live="polite">Enter subnet prefixes with the same first two octets. You can add multiple ranges to the queue.</p>
         </section>
 
         <section class="queue-panel queue-status-panel" aria-labelledby="queue-status-title">

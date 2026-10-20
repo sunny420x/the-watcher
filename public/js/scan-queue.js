@@ -92,18 +92,14 @@
 
     function updateForm(data) {
         const hasActiveJob = data.jobs.some(job => ['queued', 'running'].includes(job.status));
-        const busy = hasActiveJob || Boolean(data.activeScanRange || data.pendingScanRange) || requestPending;
-        submit.disabled = busy;
-        form.querySelectorAll('input').forEach(input => { input.disabled = busy; });
-        if (hasActiveJob) {
-            message.textContent = 'A scan job is active. You can add another range when it finishes.';
-            message.classList.add('is-busy');
-        } else if (data.activeScanRange || data.pendingScanRange) {
-            const current = data.activeScanRange || data.pendingScanRange;
-            message.textContent = `A scan is running for ${current}. Please wait for it to finish.`;
+        const scanInProgress = hasActiveJob || Boolean(data.activeScanRange || data.pendingScanRange);
+        submit.disabled = requestPending;
+        form.querySelectorAll('input').forEach(input => { input.disabled = requestPending; });
+        if (scanInProgress) {
+            message.textContent = 'A scan is in progress. New ranges will be added to the queue and scanned in order.';
             message.classList.add('is-busy');
         } else {
-            message.textContent = 'Enter three-octet subnet prefixes with the same first two octets.';
+            message.textContent = 'Enter subnet prefixes with the same first two octets. You can add multiple ranges to the queue.';
             message.classList.remove('is-busy');
         }
     }
@@ -143,7 +139,7 @@
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Could not add scan range.');
             form.reset();
-            message.textContent = `Scan range added (job #${data.id}).`;
+            message.textContent = `Scan range added to the queue (job #${data.id}).`;
         } catch (error) {
             message.textContent = error.message;
             message.classList.add('is-error');

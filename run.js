@@ -20,6 +20,7 @@ const db = mysql.createPool({
     connectionLimit: 10,
     queueLimit: 0
 });
+const MAX_SEARCH_TITLE_LENGTH = 512;
 
 let scanQueueWorkerRunning = false;
 let activeScanRange = null;
@@ -319,7 +320,10 @@ async function getScanQueueStatus() {
                total_ranges, completed_ranges, error_message, created_at,
                started_at, finished_at
         FROM scan_queue_jobs
-        ORDER BY id DESC
+        ORDER BY
+            CASE WHEN status IN ('running', 'queued') THEN 0 ELSE 1 END,
+            CASE WHEN status IN ('running', 'queued') THEN id END ASC,
+            id DESC
         LIMIT 25
     `);
     return {
@@ -542,13 +546,16 @@ async function saveScanCache(
         try {
             ip_address = new URL(result.host).hostname;
         } catch { }
+        const title = typeof result.title === 'string'
+            ? [...result.title].slice(0, MAX_SEARCH_TITLE_LENGTH).join('')
+            : null;
         observations.push([
             ip_range,
             result.host,
             ip_address,
             'web',
             80,
-            result.title || null
+            title || null
         ]);
     });
 
@@ -742,20 +749,6 @@ app.post('/api/scan-queue', async (req, res) => {
         lockAcquired = Number(lock.acquired) === 1;
         if (!lockAcquired) {
             return res.status(503).json({ error: 'The scan queue is busy. Please try again shortly.' });
-        }
-
-        if (activeScanRange || pendingScanRanges.size > 0) {
-            const range = activeScanRange || pendingScanRanges.keys().next().value;
-            return res.status(409).json({ error: `A scan is already running or starting${range ? ` for ${range}` : ''}.` });
-        }
-
-        const [activeJobs] = await connection.execute(`
-            SELECT id FROM scan_queue_jobs
-            WHERE status IN ('queued', 'running')
-            LIMIT 1
-        `);
-        if (activeJobs.length > 0) {
-            return res.status(409).json({ error: 'A scan job is already active. Wait for it to finish before adding another.' });
         }
 
         const startRange = `${start.basePrefix}.${start.thirdOctet}`;
