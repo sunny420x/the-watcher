@@ -4,8 +4,8 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="utf-8">
-    <title>The Watcher | Explore Your Network, One Subnet at a Time</title>
-    <meta name="description" content="Explore a subnet with The Watcher. Discover web, SSH, FTP, and RTSP hosts, inspect network results, and look up IP ownership in one place.">
+    <title data-en-text="The Watcher | Explore Your Network, One Subnet at a Time" data-th-text="The Watcher | สำรวจเครือข่ายอินเทอร์เน็ตทีละ Subnet">The Watcher | Explore Your Network, One Subnet at a Time</title>
+    <meta name="description" content="Explore a subnet with The Watcher. Discover web, SSH, FTP, and RTSP hosts, inspect network results, and look up IP ownership in one place." data-en-content="Explore a subnet with The Watcher. Discover web, SSH, FTP, and RTSP hosts, inspect network results, and look up IP ownership in one place." data-th-content="สำรวจ subnet ด้วย The Watcher ค้นหาโฮสต์เว็บ SSH FTP และ RTSP พร้อมดูผลสแกนและข้อมูลเจ้าของ IP">
     <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#0b100d">
     <meta property="og:type" content="website">
@@ -18,47 +18,49 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
         rel="stylesheet">
     <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
 <body>
     <div class="intro-splash" aria-hidden="true">
         <div class="intro-splash-copy">
-            <p>subnet observatory</p>
-            <h1>See what is<br><em>awake.</em></h1>
+            <p data-en-text="subnet observatory" data-th-text="หอสังเกตการณ์เครือข่าย">subnet observatory</p>
+            <h1><span data-en-text="See what is" data-th-text="มาดูกันว่าอะไร">See what is</span><br><em data-en-text="awake." data-th-text="กำลังออนไลน์">awake.</em></h1>
         </div>
     </div>
     <%-include('components/navigator')%>
     <main class="shell">
-        <section aria-label="Scan controls">
+        <section aria-label="Scan controls" data-en-aria-label="Scan controls" data-th-aria-label="เครื่องมือสแกน">
             <div class="controls">
                 <div class="search-wrap"><span class="search-icon">&gt;_</span><input type="text" id="query"
-                        onchange="search(this.value)" placeholder="Enter subnet, e.g. 192.168.1.1"></div>
-                <button onclick="back()" class="nav-button" title="Previous subnet"
-                    aria-label="Previous subnet">&#8592;</button>
-                <button onclick="next()" class="nav-button" title="Next subnet"
-                    aria-label="Next subnet">&#8594;</button>
+                        onchange="search(this.value)" placeholder="Enter subnet, e.g. 192.168.1.1"
+                        data-en-placeholder="Enter subnet, e.g. 192.168.1.1" data-th-placeholder="กรอก subnet เช่น 192.168.1.1"></div>
+                <button onclick="back()" class="nav-button" title="Previous subnet" data-en-title="Previous subnet" data-th-title="Subnet ก่อนหน้า"
+                    aria-label="Previous subnet" data-en-aria-label="Previous subnet" data-th-aria-label="Subnet ก่อนหน้า">&#8592;</button>
+                <button onclick="next()" class="nav-button" title="Next subnet" data-en-title="Next subnet" data-th-title="Subnet ถัดไป"
+                    aria-label="Next subnet" data-en-aria-label="Next subnet" data-th-aria-label="Subnet ถัดไป">&#8594;</button>
             </div>
             <div style="display: flex; flex-direction: row; gap: 8px;">
                 <label class="filter"><input type="checkbox" id="hiddenFilter" onchange="toggleFilter('hidden')">
-                    Include hosts with default page.</label>
+                    <span data-en-text="Include hosts with default page." data-th-text="รวมโฮสต์ที่แสดงหน้าเริ่มต้น">Include hosts with default page.</span></label>
             </div>
         </section>
         <div class="container">
             <div id="result"></div>
             <div id="network-constellation">
                 <div class="graph-heading">
-                    <div><h2>Network constellation</h2><span id="constellation-status">Drag to move · scroll to zoom · click a host to preview</span></div>
+                    <div><h2 data-en-text="Network constellation" data-th-text="แผนภาพเครือข่าย">Network constellation</h2><span id="constellation-status" data-en-text="Drag to move · scroll to zoom · click a host to preview" data-th-text="ลากเพื่อเลื่อน · เลื่อนเมาส์เพื่อซูม · คลิกโฮสต์เพื่อดูตัวอย่าง">Drag to move · scroll to zoom · click a host to preview</span></div>
                     <div class="constellation-tools">
-                        <button type="button" onclick="networkConstellation.zoomBy(1.2)" aria-label="Zoom in">+</button>
-                        <button type="button" onclick="networkConstellation.zoomBy(1 / 1.2)" aria-label="Zoom out">−</button>
-                        <button type="button" onclick="networkConstellation.resetView()">Reset view</button>
+                        <button type="button" onclick="networkConstellation.zoomBy(1.2)" aria-label="Zoom in" data-en-aria-label="Zoom in" data-th-aria-label="ซูมเข้า">+</button>
+                        <button type="button" onclick="networkConstellation.zoomBy(1 / 1.2)" aria-label="Zoom out" data-en-aria-label="Zoom out" data-th-aria-label="ซูมออก">−</button>
+                        <button type="button" onclick="networkConstellation.resetView()" data-en-text="Reset view" data-th-text="รีเซ็ตมุมมอง">Reset view</button>
                     </div>
                 </div>
-                <div id="wrapper"><canvas id="myCanvas" aria-label="Interactive network constellation">Your browser does not support the canvas element.</canvas></div>
+                <div id="wrapper"><canvas id="myCanvas" aria-label="Interactive network constellation" data-en-aria-label="Interactive network constellation" data-th-aria-label="แผนภาพเครือข่ายแบบโต้ตอบ"><span data-en-text="Your browser does not support the canvas element." data-th-text="เบราว์เซอร์ไม่รองรับ canvas">Your browser does not support the canvas element.</span></canvas></div>
             </div>
         </div>
     </main>
@@ -71,8 +73,8 @@
         let scanRequestId = 0
         let seekTimer = null
 
-        const loadingSkeleton = `<div class="skeleton-results" role="status" aria-label="Scanning network">
-            <span class="visually-hidden">Scanning network…</span>
+        const loadingSkeleton = `<div class="skeleton-results" role="status" aria-label="${window.siteTranslate('Scanning network', 'กำลังสแกนเครือข่าย')}">
+            <span class="visually-hidden">${window.siteTranslate('Scanning network…', 'กำลังสแกนเครือข่าย…')}</span>
             <section class="skeleton-panel">
                 <div class="skeleton-heading"><i class="skeleton-block skeleton-count"></i><i class="skeleton-block skeleton-title"></i></div>
                 <i class="skeleton-block skeleton-table-head"></i>
@@ -111,15 +113,20 @@
                         toast: true,
                         position: 'bottom-end',
                         icon: 'info',
-                        title: `Nothing found in ${range}; seeking next subnet`,
+                        title: window.siteTranslate(
+                            `Nothing found in ${range}; seeking next subnet`,
+                            `ไม่พบโฮสต์ใน ${range}; กำลังค้นหา Subnet ถัดไป`
+                        ),
                         showConfirmButton: false,
                         timer: 1800,
-                        timerProgressBar: false
+                        timerProgressBar: false,
+                        customClass: { popup: 'theme-toast' }
                     })
                     seekTimer = setTimeout(() => next(true), 900)
                 } else {
                     seekActive = false
                     document.getElementById('result').innerHTML = data.html
+                    window.applySiteLanguage(document.getElementById('result'))
                     networkConstellation.render(data.data.open_ip || [], range)
                 }
             }).catch(error => {
@@ -227,15 +234,15 @@
                 }
             } catch (error) {
                 Swal.fire({
-                    title: 'Invalid host',
-                    text: 'This host cannot be previewed.',
+                    title: window.siteTranslate('Invalid host', 'โฮสต์ไม่ถูกต้อง'),
+                    text: window.siteTranslate('This host cannot be previewed.', 'ไม่สามารถแสดงตัวอย่างโฮสต์นี้ได้'),
                     icon: 'error'
                 });
                 return;
             }
 
             Swal.fire({
-                title: `Preview · ${previewUrl.host}`,
+                title: window.siteTranslate(`Preview · ${previewUrl.host}`, `ตัวอย่าง · ${previewUrl.host}`),
                 html: '<div class="host-preview-frame"></div>',
                 width: 'min(1100px, 94vw)',
                 padding: '18px',
@@ -247,7 +254,7 @@
                     frame.src = previewUrl.protocol === 'http:'
                         ? `/preview?url=${encodeURIComponent(previewUrl.href)}`
                         : previewUrl.href;
-                    frame.title = `Preview of ${previewUrl.host}`;
+                    frame.title = window.siteTranslate(`Preview of ${previewUrl.host}`, `ตัวอย่างของ ${previewUrl.host}`);
                     frame.loading = 'lazy';
                     frame.referrerPolicy = 'no-referrer';
                     frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups');
@@ -262,6 +269,7 @@
                 toast: true,
                 position: 'bottom-end',
                 title,
+                customClass: { popup: 'theme-toast' },
                 didOpen: () => Swal.showLoading(),
                 showConfirmButton: false
             });
@@ -271,57 +279,57 @@
             const output = document.createElement('textarea');
             output.readOnly = true;
             output.style.cssText = 'width:100%;height:400px;';
-            output.value = outputText || 'No output returned.';
+            output.value = outputText || window.siteTranslate('No output returned.', 'ไม่มีผลลัพธ์');
             Swal.fire({
                 title,
                 html: output,
                 width: 800,
-                confirmButtonText: 'Close'
+                confirmButtonText: window.siteTranslate('Close', 'ปิด')
             });
         }
 
         function nmap(ip) {
-            showToolProgress('Running Nmap...');
+            showToolProgress(window.siteTranslate('Running Nmap...', 'กำลังเรียกใช้ Nmap...'));
             fetch('/nmap/' + encodeURIComponent(ip))
                 .then(async response => {
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || 'Nmap request failed.');
+                    if (!response.ok) throw new Error(window.siteLocalizeMessage(data.error || 'Nmap request failed.'));
                     return data;
                 })
-                .then(data => showToolOutput('Nmap Result', data.stdout))
+                .then(data => showToolOutput(window.siteTranslate('Nmap Result', 'ผลลัพธ์ Nmap'), data.stdout))
                 .catch(error => {
-                    Swal.fire({ title: 'Nmap failed', text: error.message, icon: 'error' });
+                    Swal.fire({ title: window.siteTranslate('Nmap failed', 'Nmap ล้มเหลว'), text: error.message, icon: 'error' });
                 });
         }
 
         function whois(ip) {
-            showToolProgress('Looking up WHOIS...');
+            showToolProgress(window.siteTranslate('Looking up WHOIS...', 'กำลังค้นหา WHOIS...'));
 
             fetch('/whois/' + encodeURIComponent(ip))
                 .then(async response => {
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || 'WHOIS lookup failed.');
+                    if (!response.ok) throw new Error(window.siteLocalizeMessage(data.error || 'WHOIS lookup failed.'));
                     return data;
                 })
                 .then(data => {
-                    showToolOutput(`WHOIS · ${ip}`, data.stdout || 'No WHOIS data returned.');
+                    showToolOutput(`WHOIS · ${ip}`, data.stdout || window.siteTranslate('No WHOIS data returned.', 'ไม่พบข้อมูล WHOIS'));
                 })
                 .catch(error => {
-                    Swal.fire({ title: 'WHOIS lookup failed', text: error.message, icon: 'error' });
+                    Swal.fire({ title: window.siteTranslate('WHOIS lookup failed', 'ค้นหา WHOIS ไม่สำเร็จ'), text: error.message, icon: 'error' });
                 });
         }
 
         function rtsp(ip) {
-            showToolProgress('Running RTSP check...');
+            showToolProgress(window.siteTranslate('Running RTSP check...', 'กำลังตรวจสอบ RTSP...'));
             fetch('/rtsp/' + encodeURIComponent(ip))
                 .then(async response => {
                     const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || 'RTSP request failed.');
+                    if (!response.ok) throw new Error(window.siteLocalizeMessage(data.error || 'RTSP request failed.'));
                     return data;
                 })
-                .then(data => showToolOutput('RTSP Result', data.stdout))
+                .then(data => showToolOutput(window.siteTranslate('RTSP Result', 'ผลลัพธ์ RTSP'), data.stdout))
                 .catch(error => {
-                    Swal.fire({ title: 'RTSP check failed', text: error.message, icon: 'error' });
+                    Swal.fire({ title: window.siteTranslate('RTSP check failed', 'ตรวจสอบ RTSP ไม่สำเร็จ'), text: error.message, icon: 'error' });
                 });
         }
     </script>

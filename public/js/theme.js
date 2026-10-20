@@ -27,7 +27,10 @@
             const moonIcon = toggle.querySelector('.theme-icon-moon');
             if (sunIcon) sunIcon.hidden = nextTheme !== 'light';
             if (moonIcon) moonIcon.hidden = nextTheme !== 'dark';
-            toggle.setAttribute('aria-label', `Switch to ${nextTheme} theme`);
+            const label = nextTheme === 'light'
+                ? ['Switch to light theme', 'สลับเป็นธีมสว่าง']
+                : ['Switch to dark theme', 'สลับเป็นธีมมืด'];
+            toggle.setAttribute('aria-label', window.siteTranslate ? window.siteTranslate(...label) : label[0]);
             toggle.setAttribute('aria-pressed', String(theme === 'light'));
         }
     }

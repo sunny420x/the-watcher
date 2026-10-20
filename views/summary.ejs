@@ -4,12 +4,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Scan Summary | The Watcher</title>
-    <meta name="description" content="Summarize discovered IPs and web page titles across recorded network scans.">
+    <title data-en-text="Scan Summary | The Watcher" data-th-text="สรุปผลการสแกน | The Watcher">Scan Summary | The Watcher</title>
+    <meta name="description" content="Summarize discovered IPs and web page titles across recorded network scans." data-en-content="Summarize discovered IPs and web page titles across recorded network scans." data-th-content="สรุป IP และ Title ของเว็บไซต์ที่พบจากการสแกนเครือข่าย">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
@@ -17,40 +18,40 @@
     <%- include('components/navigator') %>
     <main class="shell summary-shell">
         <header class="search-heading">
-            <p class="eyebrow">Network intelligence</p>
-            <h1>Scan summary</h1>
-            <p>Overview of the hosts and services currently recorded in the scan index.</p>
+            <p class="eyebrow" data-en-text="Network intelligence" data-th-text="สำรวจเครือข่ายอินเทอร์เน็ต">Network intelligence</p>
+            <h1 data-en-text="Scan summary" data-th-text="สรุปผลการสแกน">Scan summary</h1>
+            <p data-en-text="Overview of the hosts and services currently recorded in the scan index." data-th-text="ภาพรวมโฮสต์และบริการที่บันทึกไว้ในดัชนีการสแกน">Overview of the hosts and services currently recorded in the scan index.</p>
             <div class="summary-heading-actions">
-                <span class="summary-cache-status">Cached at <%= summarizedAt.toLocaleString() %></span>
+                <span class="summary-cache-status"><span data-en-text="Cached at" data-th-text="แคชเมื่อ">Cached at</span> <time data-localized-date="<%= summarizedAt.toISOString() %>"><%= summarizedAt.toLocaleString() %></time></span>
                 <form class="summary-refresh-form" method="post" action="/summary/refresh">
-                    <button class="summary-refresh-button" type="submit">Re-summarize</button>
+                    <button class="summary-refresh-button" type="submit" data-en-text="Re-summarize" data-th-text="สรุปใหม่">Re-summarize</button>
                 </form>
             </div>
         </header>
 
-        <section class="summary-metrics" aria-label="Scan totals">
+        <section class="summary-metrics" aria-label="Scan totals" data-en-aria-label="Scan totals" data-th-aria-label="ยอดรวมการสแกน">
             <article class="summary-metric">
-                <span>Unique IPs</span>
+                <span data-en-text="Unique IPs" data-th-text="IP ไม่ซ้ำ">Unique IPs</span>
                 <strong><%= stats.total_ips.toLocaleString('en-US') %></strong>
             </article>
             <article class="summary-metric">
-                <span>Subnet ranges with findings</span>
+                <span data-en-text="Subnet ranges with findings" data-th-text="ช่วง Subnet ที่พบโฮสต์">Subnet ranges with findings</span>
                 <strong><%= stats.ranges_with_findings.toLocaleString('en-US') %></strong>
             </article>
             <article class="summary-metric">
-                <span>Web IPs</span>
+                <span data-en-text="Web IPs" data-th-text="IP เว็บ">Web IPs</span>
                 <strong><%= stats.web_ips.toLocaleString('en-US') %></strong>
             </article>
             <article class="summary-metric">
-                <span>SSH IPs</span>
+                <span data-en-text="SSH IPs" data-th-text="IP SSH">SSH IPs</span>
                 <strong><%= stats.ssh_ips.toLocaleString('en-US') %></strong>
             </article>
             <article class="summary-metric">
-                <span>FTP IPs</span>
+                <span data-en-text="FTP IPs" data-th-text="IP FTP">FTP IPs</span>
                 <strong><%= stats.ftp_ips.toLocaleString('en-US') %></strong>
             </article>
             <article class="summary-metric">
-                <span>RTSP IPs</span>
+                <span data-en-text="RTSP IPs" data-th-text="IP RTSP">RTSP IPs</span>
                 <strong><%= stats.rtsp_ips.toLocaleString('en-US') %></strong>
             </article>
         </section>
@@ -58,27 +59,26 @@
         <section class="queue-panel summary-panel" aria-labelledby="summary-web-title">
             <div class="queue-panel-heading">
                 <div>
-                    <p class="eyebrow">Website titles</p>
-                    <h2 id="summary-web-title">Web IPs by page type</h2>
+                    <p class="eyebrow" data-en-text="Website titles" data-th-text="Title ของเว็บไซต์">Website titles</p>
+                    <h2 id="summary-web-title" data-en-text="Web IPs by page type" data-th-text="IP เว็บแยกตามประเภทหน้า">Web IPs by page type</h2>
                 </div>
-                <span class="queue-mode">CASE INSENSITIVE MATCH</span>
             </div>
             <% if (stats.web_ips === 0) { %>
-                <div class="index-empty-state">No web hosts have been recorded yet.</div>
+                <div class="index-empty-state" data-en-text="No web hosts have been recorded yet." data-th-text="ยังไม่มีโฮสต์เว็บที่บันทึกไว้">No web hosts have been recorded yet.</div>
             <% } else { %>
                 <div class="summary-category-grid">
                     <% categoryRows.filter(row => row.ipCount > 0).forEach(row => { %>
                         <article class="summary-category-card">
                             <div class="summary-category-card-heading">
-                                <h3><%= row.category %></h3>
+                                <h3 data-category-label="<%= row.category %>"><%= row.category %></h3>
                                 <strong><%= row.ipCount.toLocaleString('en-US') %></strong>
                             </div>
-                            <p class="summary-category-count-label">IPs</p>
+                            <p class="summary-category-count-label" data-en-text="IPs" data-th-text="IP">IPs</p>
                         </article>
                     <% }) %>
                 </div>
             <% } %>
-            <p class="summary-note">Each IP is counted once. When a title matches more than one keyword, the category with the highest match priority is used.</p>
+            <p class="summary-note" data-en-text="Each IP is counted once. When a title matches more than one keyword, the category with the highest match priority is used." data-th-text="นับแต่ละ IP เพียงครั้งเดียว หาก Title ตรงกับหลายคีย์เวิร์ด จะใช้หมวดที่มีลำดับความสำคัญสูงสุด">Each IP is counted once. When a title matches more than one keyword, the category with the highest match priority is used.</p>
         </section>
     </main>
 </body>

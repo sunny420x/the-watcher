@@ -4,12 +4,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Search Network Observations | The Watcher</title>
-    <meta name="description" content="Search observed hosts, services, titles, and subnet ranges in The Watcher network index.">
+    <title data-en-text="Search Network Observations | The Watcher" data-th-text="ค้นหาข้อมูลเครือข่าย | The Watcher">Search Network Observations | The Watcher</title>
+    <meta name="description" content="Search observed hosts, services, titles, and subnet ranges in The Watcher network index." data-en-content="Search observed hosts, services, titles, and subnet ranges in The Watcher network index." data-th-content="ค้นหาโฮสต์ บริการ Title และช่วง Subnet ที่บันทึกไว้ในดัชนีเครือข่าย The Watcher">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
@@ -17,60 +18,60 @@
     <%-include('components/navigator')%>
     <main class="shell search-shell">
         <header class="search-heading">
-            <p class="eyebrow">Network intelligence</p>
-            <h1>Search observations</h1>
-            <p>Find hosts and services recorded in the scan index.</p>
+            <p class="eyebrow" data-en-text="Network intelligence" data-th-text="สำรวจเครือข่ายอินเทอร์เน็ต">Network intelligence</p>
+            <h1 data-en-text="Search observations" data-th-text="ค้นหาข้อมูลที่ตรวจพบ">Search observations</h1>
+            <p data-en-text="Find hosts and services recorded in the scan index." data-th-text="ค้นหาโฮสต์และบริการที่บันทึกไว้จากการสแกน">Find hosts and services recorded in the scan index.</p>
         </header>
 
         <form class="index-search-form" action="/" method="get">
             <label class="index-query-field">
-                <span>Search</span>
-                <input type="search" name="q" value="<%= q %>" placeholder="IP, host, title, or range">
+                <span data-en-text="Search" data-th-text="คำค้น">Search</span>
+                <input type="search" name="q" value="<%= q %>" placeholder="IP, host, title, or range" data-en-placeholder="IP, host, title, or range" data-th-placeholder="IP, โฮสต์, Title หรือช่วง IP">
             </label>
             <label>
-                <span>Service</span>
+                <span data-en-text="Service" data-th-text="บริการ">Service</span>
                 <select name="service">
-                    <option value="">All services</option>
+                    <option value="" data-en-text="All services" data-th-text="ทุกบริการ">All services</option>
                     <% services.forEach(service => { %>
                         <option value="<%= service %>" <%= selectedService === service ? 'selected' : '' %>><%= service.toUpperCase() %></option>
                     <% }) %>
                 </select>
             </label>
             <label>
-                <span>IP range</span>
+                <span data-en-text="IP range" data-th-text="ช่วง IP">IP range</span>
                 <select name="ip_range">
-                    <option value="">All ranges</option>
+                    <option value="" data-en-text="All ranges" data-th-text="ทุกช่วง">All ranges</option>
                     <% ranges.forEach(range => { %>
                         <option value="<%= range %>" <%= selectedRange === range ? 'selected' : '' %>><%= range %>.0/24</option>
                     <% }) %>
                 </select>
             </label>
             <div class="index-search-actions">
-                <button class="index-search-submit" type="submit">Search</button>
-                <a href="/">Clear</a>
+                <button class="index-search-submit" type="submit" data-en-text="Search" data-th-text="ค้นหา">Search</button>
+                <a href="/" data-en-text="Clear" data-th-text="ล้าง">Clear</a>
             </div>
         </form>
 
         <section class="index-results" aria-live="polite">
             <% if (!hasSearch) { %>
-                <div class="index-empty-state">Enter a search term or choose a filter to explore the index.</div>
+                <div class="index-empty-state" data-en-text="Enter a search term or choose a filter to explore the index." data-th-text="กรอกคำค้นหรือเลือกตัวกรองเพื่อค้นหาข้อมูล">Enter a search term or choose a filter to explore the index.</div>
             <% } else if (total === 0) { %>
-                <div class="index-empty-state">No observations match these filters.</div>
+                <div class="index-empty-state" data-en-text="No observations match these filters." data-th-text="ไม่พบข้อมูลที่ตรงกับตัวกรองนี้">No observations match these filters.</div>
             <% } else { %>
                 <div class="index-results-heading">
-                    <h2>Results</h2>
-                    <span><%= total %> observation<%= total === 1 ? '' : 's' %></span>
+                    <h2 data-en-text="Results" data-th-text="ผลการค้นหา">Results</h2>
+                    <span><%= total.toLocaleString('en-US') %> <span data-en-text="observation<%= total === 1 ? '' : 's' %>" data-th-text="รายการ">observations</span></span>
                 </div>
                 <div class="index-table-wrap">
                     <table class="index-table">
                         <thead>
                             <tr>
-                                <th>Service</th>
-                                <th>Host</th>
-                                <th>Port</th>
-                                <th>Title</th>
-                                <th>IP range</th>
-                                <th>Last scanned</th>
+                                <th data-en-text="Service" data-th-text="บริการ">Service</th>
+                                <th data-en-text="Host" data-th-text="โฮสต์">Host</th>
+                                <th data-en-text="Port" data-th-text="พอร์ต">Port</th>
+                                <th data-en-text="Title" data-th-text="Title">Title</th>
+                                <th data-en-text="IP range" data-th-text="ช่วง IP">IP range</th>
+                                <th data-en-text="Last scanned" data-th-text="สแกนล่าสุด">Last scanned</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -94,13 +95,13 @@
                     </table>
                 </div>
                 <% if (totalPages > 1) { %>
-                    <nav class="index-pagination" aria-label="Search result pages">
+                    <nav class="index-pagination" aria-label="Search result pages" data-en-aria-label="Search result pages" data-th-aria-label="หน้าผลการค้นหา">
                         <% if (page > 1) { %>
-                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page - 1 %>">Previous</a>
+                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page - 1 %>" data-en-text="Previous" data-th-text="ก่อนหน้า">Previous</a>
                         <% } else { %><span></span><% } %>
-                        <span>Page <%= page %> of <%= totalPages %></span>
+                        <span data-en-text="Page <%= page %> of <%= totalPages %>" data-th-text="หน้า <%= page %> จาก <%= totalPages %>">Page <%= page %> of <%= totalPages %></span>
                         <% if (page < totalPages) { %>
-                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page + 1 %>">Next</a>
+                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page + 1 %>" data-en-text="Next" data-th-text="ถัดไป">Next</a>
                         <% } else { %><span></span><% } %>
                     </nav>
                 <% } %>

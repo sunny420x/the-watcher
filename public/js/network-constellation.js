@@ -111,7 +111,11 @@
         ctx.fillText('NET', 0, 0);
         ctx.restore();
 
-        status.textContent = `${state.range} · ${state.nodes.length} web host${state.nodes.length === 1 ? '' : 's'} · ${Math.round(state.zoom * 100)}%`;
+        const count = state.nodes.length;
+        const hostLabel = window.siteLanguage && window.siteLanguage() === 'th'
+            ? window.siteTranslate('web host', 'เว็บโฮสต์')
+            : `web host${count === 1 ? '' : 's'}`;
+        status.textContent = `${state.range} · ${count} ${hostLabel} · ${Math.round(state.zoom * 100)}%`;
     }
 
     function render(hosts, range) {
@@ -203,6 +207,7 @@
     }, { passive: false });
 
     window.addEventListener('resize', resize);
+    document.addEventListener('site-language-change', draw);
     new ResizeObserver(resize).observe(viewport);
 
     window.networkConstellation = {

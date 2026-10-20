@@ -1,15 +1,16 @@
 <!doctype html>
-<html lang="th">
+<html lang="en">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Subnet scan queue | The Watcher</title>
-    <meta name="description" content="Run subnet scans in the background and track progress across a subnet range.">
+    <title data-en-text="Subnet scan queue | The Watcher" data-th-text="คิวสแกน Subnet | The Watcher">Subnet scan queue | The Watcher</title>
+    <meta name="description" content="Run subnet scans in the background and track progress across a subnet range." data-en-content="Run subnet scans in the background and track progress across a subnet range." data-th-content="จัดคิวสแกน Subnet เบื้องหลังและติดตามความคืบหน้าของแต่ละช่วง">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
@@ -17,57 +18,57 @@
     <%-include('components/navigator')%>
     <main class="shell queue-shell">
         <header class="search-heading">
-            <p class="eyebrow">Background scanner</p>
-            <h1>Subnet scan queue</h1>
-            <p>Add subnet ranges to the background queue. The scanner handles one job at a time and starts the next job automatically.</p>
+            <p class="eyebrow" data-en-text="Background scanner" data-th-text="ระบบสแกนเบื้องหลัง">Background scanner</p>
+            <h1 data-en-text="Subnet scan queue" data-th-text="คิวสแกน Subnet">Subnet scan queue</h1>
+            <p data-en-text="Add subnet ranges to the background queue. The scanner handles one job at a time and starts the next job automatically." data-th-text="เพิ่มช่วง subnet เข้าคิวเบื้องหลัง ระบบจะสแกนทีละงานและเริ่มงานถัดไปให้อัตโนมัติ">Add subnet ranges to the background queue. The scanner handles one job at a time and starts the next job automatically.</p>
         </header>
 
         <section class="queue-panel" aria-labelledby="queue-form-title">
             <div class="queue-panel-heading">
                 <div>
-                    <p class="eyebrow">New scan range</p>
-                    <h2 id="queue-form-title">Set a subnet range</h2>
+                    <p class="eyebrow" data-en-text="New scan range" data-th-text="เพิ่มช่วงสแกน">New scan range</p>
+                    <h2 id="queue-form-title" data-en-text="Set a subnet range" data-th-text="กำหนดช่วง Subnet">Set a subnet range</h2>
                 </div>
-                <span class="queue-mode">ONE SCAN AT A TIME</span>
+                <span class="queue-mode" data-en-text="ONE SCAN AT A TIME" data-th-text="สแกนทีละงาน">ONE SCAN AT A TIME</span>
             </div>
-            <p class="queue-help">Enter the first and last subnet prefixes, for example <code>192.168.0</code> to <code>192.168.255</code>. Each /24 is scanned in order (hosts <code>.0–.255</code>). You can add another range while a job is running; it will wait its turn.</p>
+            <p class="queue-help"><span data-en-text="Enter the first and last subnet prefixes, for example" data-th-text="กรอก subnet prefix เริ่มต้นและสิ้นสุด เช่น">Enter the first and last subnet prefixes, for example</span> <code>192.168.0</code> <span data-en-text="to" data-th-text="ถึง">to</span> <code>192.168.255</code><span data-en-text=". Each /24 is scanned in order (hosts" data-th-text=" แต่ละ /24 จะสแกนตามลำดับ (โฮสต์">. Each /24 is scanned in order (hosts</span> <code>.0–.255</code><span data-en-text="). You can add another range while a job is running; it will wait its turn." data-th-text=") ระหว่างที่กำลังสแกน คุณเพิ่มช่วงอื่นเข้าคิวรอได้">). You can add another range while a job is running; it will wait its turn.</span></p>
             <form id="queue-form" class="queue-form">
                 <label>
-                    <span>First subnet</span>
+                    <span data-en-text="First subnet" data-th-text="Subnet เริ่มต้น">First subnet</span>
                     <input type="text" name="start_range" inputmode="decimal" placeholder="192.168.0" autocomplete="off" required>
                 </label>
                 <span class="queue-range-arrow" aria-hidden="true">→</span>
                 <label>
-                    <span>Last subnet</span>
+                    <span data-en-text="Last subnet" data-th-text="Subnet สิ้นสุด">Last subnet</span>
                     <input type="text" name="end_range" inputmode="decimal" placeholder="192.168.255" autocomplete="off" required>
                 </label>
-                <button id="queue-submit" type="submit">Add to queue</button>
+                <button id="queue-submit" type="submit" data-en-text="Add to queue" data-th-text="เพิ่มเข้าคิว">Add to queue</button>
             </form>
-            <p id="queue-message" class="queue-message" role="status" aria-live="polite">Enter subnet prefixes with the same first two octets. You can add multiple ranges to the queue.</p>
+            <p id="queue-message" class="queue-message" role="status" aria-live="polite" data-en-text="Enter subnet prefixes with the same first two octets. You can add multiple ranges to the queue." data-th-text="กรอก subnet prefix ที่มี 2 octet แรกเหมือนกัน และเพิ่มหลายช่วงเข้าคิวได้">Enter subnet prefixes with the same first two octets. You can add multiple ranges to the queue.</p>
         </section>
 
         <section class="queue-panel queue-status-panel" aria-labelledby="queue-status-title">
             <div class="queue-panel-heading">
                 <div>
-                    <p class="eyebrow">Live status</p>
-                    <h2 id="queue-status-title">Scan status</h2>
+                    <p class="eyebrow" data-en-text="Live status" data-th-text="สถานะล่าสุด">Live status</p>
+                    <h2 id="queue-status-title" data-en-text="Scan status" data-th-text="สถานะการสแกน">Scan status</h2>
                 </div>
-                <span id="queue-refresh-status" class="queue-refresh-status">Connecting…</span>
+                <span id="queue-refresh-status" class="queue-refresh-status" data-en-text="Connecting…" data-th-text="กำลังเชื่อมต่อ…">Connecting…</span>
             </div>
             <div id="queue-active" class="queue-active" aria-live="polite">
-                <div class="queue-empty-state">No active scan job.</div>
+                <div class="queue-empty-state" data-en-text="No active scan job." data-th-text="ไม่มีงานสแกนที่กำลังทำงาน">No active scan job.</div>
             </div>
         </section>
 
         <section class="queue-panel" aria-labelledby="queue-history-title">
             <div class="queue-panel-heading">
                 <div>
-                    <p class="eyebrow">Recent jobs</p>
-                    <h2 id="queue-history-title">Scan history</h2>
+                    <p class="eyebrow" data-en-text="Recent jobs" data-th-text="งานล่าสุด">Recent jobs</p>
+                    <h2 id="queue-history-title" data-en-text="Scan history" data-th-text="ประวัติการสแกน">Scan history</h2>
                 </div>
             </div>
             <div id="queue-history" class="queue-history">
-                <div class="queue-empty-state">Loading scan history…</div>
+                <div class="queue-empty-state" data-en-text="Loading scan history…" data-th-text="กำลังโหลดประวัติการสแกน…">Loading scan history…</div>
             </div>
         </section>
     </main>

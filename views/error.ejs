@@ -4,15 +4,20 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Forbidden | The Watcher</title>
+    <title data-en-text="Forbidden | The Watcher" data-th-text="ไม่มีสิทธิ์เข้าถึง | The Watcher">Forbidden | The Watcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
 <body class="error-page">
+    <%- include('components/navigator') %>
     <main class="error-shell">
         <p>403</p>
-        <h1>Forbidden</h1>
+        <h1 data-en-text="Forbidden" data-th-text="ไม่มีสิทธิ์เข้าถึง">Forbidden</h1>
     </main>
 </body>
 
