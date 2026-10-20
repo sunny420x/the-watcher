@@ -430,6 +430,10 @@ html[data-theme="light"] .controls {
     color: var(--ink) !important;
 }
 
+html[data-theme="light"] .theme-toast.swal2-popup {
+    box-shadow: 0 8px 24px rgba(20, 30, 40, .08), 0 2px 6px rgba(20, 30, 40, .035) !important;
+}
+
 .host-preview-frame {
     width: 100%;
     height: min(68vh, 680px);
