@@ -20,6 +20,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
         rel="stylesheet">
+    <script src="/js/theme.js"></script>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 
@@ -113,9 +114,7 @@
                         title: `Nothing found in ${range}; seeking next subnet`,
                         showConfirmButton: false,
                         timer: 1800,
-                        timerProgressBar: false,
-                        background: '#17211b',
-                        color: '#dce8dc'
+                        timerProgressBar: false
                     })
                     seekTimer = setTimeout(() => next(true), 900)
                 } else {
@@ -264,9 +263,7 @@
                 position: 'bottom-end',
                 title,
                 didOpen: () => Swal.showLoading(),
-                showConfirmButton: false,
-                background: '#17211b',
-                color: '#dce8dc'
+                showConfirmButton: false
             });
         }
 
