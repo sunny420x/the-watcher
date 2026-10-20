@@ -1,6 +1,5 @@
 const net = require('net');
 const { URL } = require('url');
-const fs = require('fs/promises');
 const express = require('express')
 const app = express()
 const path = require('path');
@@ -1046,7 +1045,6 @@ app.get('/whois/:ip', (req, res) => {
 async function startServer() {
     try {
         await syncDatabaseSchema(db, path.join(__dirname, 'schema/database.sql'));
-        await applyLegacyTitleKeywordMigration();
     } catch (error) {
         console.error('Could not migrate the database:', error);
         await db.end();
@@ -1058,50 +1056,6 @@ async function startServer() {
         console.log('[+] The Watcher is listening on port http://localhost:4004');
         runScanQueueWorker();
     });
-}
-
-async function applyLegacyTitleKeywordMigration() {
-    const migrationName = '001_legacy_title_keywords';
-    const connection = await db.getConnection();
-    let lockAcquired = false;
-    let transactionStarted = false;
-
-    try {
-        const [[lock]] = await connection.query("SELECT GET_LOCK('watcher_title_keyword_data_migration', 30) AS acquired");
-        lockAcquired = Number(lock.acquired) === 1;
-        if (!lockAcquired) throw new Error('Timed out waiting for the title keyword data migration lock.');
-
-        const [appliedRows] = await connection.execute(
-            'SELECT migration_name FROM app_data_migrations WHERE migration_name = ?',
-            [migrationName]
-        );
-        if (appliedRows.length > 0) return;
-
-        const migrationSql = await fs.readFile(
-            path.join(__dirname, 'schema/migrations/001_legacy_title_keywords.sql'),
-            'utf8'
-        );
-        await connection.beginTransaction();
-        transactionStarted = true;
-        await connection.query(migrationSql);
-        await connection.execute(
-            'INSERT INTO app_data_migrations (migration_name) VALUES (?)',
-            [migrationName]
-        );
-        await connection.commit();
-        transactionStarted = false;
-        console.log('[DATA MIGRATION] Imported legacy title keywords into scan_title_keywords.');
-    } catch (error) {
-        if (transactionStarted) await connection.rollback().catch(() => {});
-        throw error;
-    } finally {
-        if (lockAcquired) {
-            try { await connection.query("SELECT RELEASE_LOCK('watcher_title_keyword_data_migration')"); } catch (error) {
-                console.error('[DATA MIGRATION] Could not release title keyword migration lock:', error);
-            }
-        }
-        connection.release();
-    }
 }
 
 startServer();
