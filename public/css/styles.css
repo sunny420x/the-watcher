@@ -815,8 +815,16 @@ html[data-theme="light"] .skeleton-block {
     stroke-width: 1.7;
 }
 
-.theme-toggle [hidden] {
+.theme-toggle .theme-icon-moon {
     display: none;
+}
+
+html[data-theme="light"] .theme-toggle .theme-icon-sun {
+    display: none;
+}
+
+html[data-theme="light"] .theme-toggle .theme-icon-moon {
+    display: block;
 }
 
 .theme-toggle:hover {

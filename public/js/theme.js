@@ -23,10 +23,6 @@
         const toggle = document.querySelector('.theme-toggle');
         if (toggle) {
             const nextTheme = theme === 'light' ? 'dark' : 'light';
-            const sunIcon = toggle.querySelector('.theme-icon-sun');
-            const moonIcon = toggle.querySelector('.theme-icon-moon');
-            if (sunIcon) sunIcon.hidden = nextTheme !== 'light';
-            if (moonIcon) moonIcon.hidden = nextTheme !== 'dark';
             const label = nextTheme === 'light'
                 ? ['Switch to light theme', 'สลับเป็นธีมสว่าง']
                 : ['Switch to dark theme', 'สลับเป็นธีมมืด'];
