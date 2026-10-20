@@ -19,11 +19,11 @@
     <main class="shell search-shell">
         <header class="search-heading">
             <p class="eyebrow" data-en-text="Network intelligence" data-th-text="สำรวจเครือข่ายอินเทอร์เน็ต">Network intelligence</p>
-            <h1 data-en-text="Search observations" data-th-text="ค้นหาข้อมูลที่ตรวจพบ">Search observations</h1>
+            <h1 data-en-text="Search observations" data-th-text="ค้นหาเว็บไซต์/บริการ">Search observations</h1>
             <p data-en-text="Find hosts and services recorded in the scan index." data-th-text="ค้นหาโฮสต์และบริการที่บันทึกไว้จากการสแกน">Find hosts and services recorded in the scan index.</p>
         </header>
 
-        <form class="index-search-form" action="/" method="get">
+        <form id="index-search-form" class="index-search-form" action="/" method="get">
             <label class="index-query-field">
                 <span data-en-text="Search" data-th-text="คำค้น">Search</span>
                 <input type="search" name="q" value="<%= q %>" placeholder="IP, host, title, or range" data-en-placeholder="IP, host, title, or range" data-th-placeholder="IP, โฮสต์, Title หรือช่วง IP">
@@ -34,15 +34,6 @@
                     <option value="" data-en-text="All services" data-th-text="ทุกบริการ">All services</option>
                     <% services.forEach(service => { %>
                         <option value="<%= service %>" <%= selectedService === service ? 'selected' : '' %>><%= service.toUpperCase() %></option>
-                    <% }) %>
-                </select>
-            </label>
-            <label>
-                <span data-en-text="IP range" data-th-text="ช่วง IP">IP range</span>
-                <select name="ip_range">
-                    <option value="" data-en-text="All ranges" data-th-text="ทุกช่วง">All ranges</option>
-                    <% ranges.forEach(range => { %>
-                        <option value="<%= range %>" <%= selectedRange === range ? 'selected' : '' %>><%= range %>.0/24</option>
                     <% }) %>
                 </select>
             </label>
@@ -97,17 +88,39 @@
                 <% if (totalPages > 1) { %>
                     <nav class="index-pagination" aria-label="Search result pages" data-en-aria-label="Search result pages" data-th-aria-label="หน้าผลการค้นหา">
                         <% if (page > 1) { %>
-                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page - 1 %>" data-en-text="Previous" data-th-text="ก่อนหน้า">Previous</a>
+                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&page=<%= page - 1 %>" data-en-text="Previous" data-th-text="ก่อนหน้า">Previous</a>
                         <% } else { %><span></span><% } %>
                         <span data-en-text="Page <%= page %> of <%= totalPages %>" data-th-text="หน้า <%= page %> จาก <%= totalPages %>">Page <%= page %> of <%= totalPages %></span>
                         <% if (page < totalPages) { %>
-                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&ip_range=<%= encodeURIComponent(selectedRange) %>&page=<%= page + 1 %>" data-en-text="Next" data-th-text="ถัดไป">Next</a>
+                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&page=<%= page + 1 %>" data-en-text="Next" data-th-text="ถัดไป">Next</a>
                         <% } else { %><span></span><% } %>
                     </nav>
                 <% } %>
             <% } %>
         </section>
     </main>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.getElementById('index-search-form').addEventListener('submit', event => {
+            const input = event.currentTarget.querySelector('input[name="q"]');
+            const query = input.value.trim();
+            if (!query) {
+                event.preventDefault();
+                Swal.fire({
+                    toast: true,
+                    position: 'bottom-end',
+                    icon: 'warning',
+                    title: window.siteTranslate('Enter a search term before searching.', 'กรุณากรอกคำค้นก่อนค้นหา'),
+                    showConfirmButton: false,
+                    timer: 2400,
+                    customClass: { popup: 'theme-toast' }
+                });
+                input.focus();
+                return;
+            }
+            input.value = query;
+        });
+    </script>
 </body>
 
 </html>

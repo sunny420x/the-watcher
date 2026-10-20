@@ -33,6 +33,7 @@
             toggle.setAttribute('aria-label', window.siteTranslate ? window.siteTranslate(...label) : label[0]);
             toggle.setAttribute('aria-pressed', String(theme === 'light'));
         }
+        document.dispatchEvent(new CustomEvent('site-theme-change', { detail: { theme } }));
     }
 
     updateTheme(savedTheme);

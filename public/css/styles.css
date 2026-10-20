@@ -20,22 +20,22 @@
 
 html[data-theme="light"] {
     color-scheme: light;
-    --ink: #1c2b21;
-    --muted: #627267;
-    --line: rgba(41, 69, 48, .18);
-    --panel: rgba(255, 255, 255, .88);
-    --lime: #416b22;
-    --cyan: #176d70;
-    --bg: #f4f7f1;
-    --bg-glow: #dcebd8;
-    --topbar-bg: rgba(244, 247, 241, .88);
-    --surface: rgba(255, 255, 255, .78);
-    --surface-raised: #e8efe5;
+    --ink: #20252b;
+    --muted: #66717d;
+    --line: rgba(32, 37, 43, .14);
+    --panel: #fff;
+    --lime: #303943;
+    --cyan: #596675;
+    --bg: #fff;
+    --bg-glow: #fff;
+    --topbar-bg: rgba(255, 255, 255, .96);
+    --surface: #fff;
+    --surface-raised: #f3f5f7;
     --popup-bg: #fff;
     --input-bg: #fff;
-    --table-heading: #627267;
-    --table-cell: #34453a;
-    --disabled-ink: #87958a;
+    --table-heading: #66717d;
+    --table-cell: #343b44;
+    --disabled-ink: #929aa3;
     --button-ink: #fff;
 }
 
@@ -246,6 +246,10 @@ h1 em {
     border-radius: 12px;
     background: var(--panel);
     box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+}
+
+html[data-theme="light"] .controls {
+    box-shadow: 0 8px 28px rgba(20, 30, 40, .08);
 }
 
 .search-wrap {
@@ -535,7 +539,7 @@ Scanner Results
 html[data-theme="light"] .skeleton-panel {
     border-color: rgba(41, 69, 48, .2);
     background: #fff;
-    box-shadow: 0 8px 24px rgba(41, 69, 48, .08);
+    box-shadow: 0 8px 24px rgba(20, 30, 40, .08);
 }
 
 html[data-theme="light"] .skeleton-block {
@@ -1047,6 +1051,15 @@ html[data-theme="light"] .skeleton-block {
     50% { box-shadow: 0 0 0 8px rgba(198, 243, 107, .025); }
 }
 
+html[data-theme="light"] .queue-pulse {
+    box-shadow: 0 0 0 5px rgba(55, 65, 75, .1);
+    animation-name: queue-pulse-light;
+}
+
+@keyframes queue-pulse-light {
+    50% { box-shadow: 0 0 0 8px rgba(55, 65, 75, .035); }
+}
+
 .queue-job-summary,
 .queue-progress-meta {
     display: flex;
@@ -1341,7 +1354,7 @@ html[data-theme="light"] .skeleton-block {
 
 .index-search-form {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(140px, 190px) minmax(150px, 220px) auto;
+    grid-template-columns: minmax(220px, 1fr) minmax(140px, 190px) auto;
     align-items: end;
     gap: 12px;
     padding: 16px;
@@ -1683,4 +1696,94 @@ html[data-theme="light"] .skeleton-block {
 
 html[lang="th"] h1 {
     letter-spacing: normal;
+}
+
+html[data-theme="light"] body {
+    background: #fff;
+}
+
+html[data-theme="light"] #wrapper {
+    background: linear-gradient(135deg, rgba(75, 85, 95, .025), rgba(75, 85, 95, .01));
+}
+
+html[data-theme="light"] .constellation-tools button:hover,
+html[data-theme="light"] .nav-link:hover {
+    border-color: var(--line);
+    color: var(--ink);
+    background: var(--surface-raised);
+}
+
+html[data-theme="light"] .host-preview-popup {
+    border-color: var(--line) !important;
+}
+
+html[data-theme="light"] .skeleton-panel {
+    border-color: var(--line);
+    box-shadow: 0 8px 24px rgba(20, 30, 40, .08);
+}
+
+html[data-theme="light"] .skeleton-block {
+    background: linear-gradient(90deg, #e8ebef, #d3d8de, #e8ebef);
+}
+
+html[data-theme="light"] #result h2 .badge {
+    border-color: var(--line);
+    color: var(--ink);
+    background: var(--surface-raised);
+}
+
+html[data-theme="light"] #result .table th,
+html[data-theme="light"] .index-table th {
+    background: #f6f7f8;
+}
+
+html[data-theme="light"] #result .table td,
+html[data-theme="light"] .index-table td,
+html[data-theme="light"] .queue-history-row {
+    border-color: var(--line);
+}
+
+html[data-theme="light"] #result .table tbody tr:hover,
+html[data-theme="light"] .index-table tbody tr:hover,
+html[data-theme="light"] #result .table td button.nav-button:hover {
+    background: #f3f5f7;
+}
+
+html[data-theme="light"] #result .overflow-auto {
+    scrollbar-color: #c1c7ce transparent;
+}
+
+html[data-theme="light"] #result .overflow-auto::-webkit-scrollbar-thumb {
+    background: #c1c7ce;
+}
+
+html[data-theme="light"] .index-search-form input:focus,
+html[data-theme="light"] .index-search-form select:focus {
+    border-color: var(--ink);
+}
+
+html[data-theme="light"] .queue-current-scan {
+    border-color: var(--line);
+    background: #f7f8f9;
+}
+
+html[data-theme="light"] .status-running,
+html[data-theme="light"] .status-queued,
+html[data-theme="light"] .status-completed {
+    border-color: var(--line);
+    color: var(--ink);
+    background: var(--surface-raised);
+}
+
+html[data-theme="light"] .queue-progress {
+    background: #e8ebef;
+}
+
+html[data-theme="light"] .index-host-link {
+    text-decoration-color: rgba(70, 80, 90, .35);
+}
+
+html[data-theme="light"] .service-chip,
+html[data-theme="light"] .service-ssh {
+    border-color: var(--line);
 }

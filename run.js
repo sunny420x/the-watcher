@@ -635,18 +635,11 @@ async function renderSearchPage(req, res) {
     const services = ['web', 'ssh', 'ftp', 'rtsp'];
     const selectedService = services.includes(req.query.service) ? req.query.service : '';
     const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
-    let selectedRange = typeof req.query.ip_range === 'string' ? req.query.ip_range : '';
     const pageSize = 50;
     let page = Number.parseInt(req.query.page, 10);
     if (!Number.isInteger(page) || page < 1) page = 1;
 
     try {
-        const [rangeRows] = await db.execute(
-            'SELECT DISTINCT ip_range FROM scan_search_index ORDER BY ip_range'
-        );
-        const ranges = rangeRows.map(row => row.ip_range);
-        if (!ranges.includes(selectedRange)) selectedRange = '';
-
         const conditions = [];
         const params = [];
         if (q) {
@@ -658,11 +651,6 @@ async function renderSearchPage(req, res) {
             conditions.push('service = ?');
             params.push(selectedService);
         }
-        if (selectedRange) {
-            conditions.push('ip_range = ?');
-            params.push(selectedRange);
-        }
-
         let results = [];
         let total = 0;
         if (conditions.length > 0) {
@@ -692,8 +680,6 @@ async function renderSearchPage(req, res) {
             q,
             services,
             selectedService,
-            ranges,
-            selectedRange,
             results,
             total,
             page,

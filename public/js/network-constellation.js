@@ -44,6 +44,42 @@
 
     function draw() {
         if (!state.width || !state.height) return;
+        const lightTheme = document.documentElement.dataset.theme === 'light';
+        const colors = lightTheme ? {
+            grid: 'rgba(90, 100, 110, .08)',
+            edge: 'rgba(100, 112, 125, .3)',
+            selectedEdge: 'rgba(48, 57, 67, .55)',
+            nodeHalo: 'rgba(100, 112, 125, .12)',
+            selectedHalo: 'rgba(48, 57, 67, .18)',
+            node: '#aab2bb',
+            selectedNode: '#4b5563',
+            nodeStroke: 'rgba(70, 80, 90, .65)',
+            selectedStroke: '#fff',
+            nodeText: '#26303a',
+            label: '#66717d',
+            selectedLabel: '#303943',
+            centerHalo: 'rgba(48, 57, 67, .12)',
+            center: '#303943',
+            centerStroke: 'rgba(255, 255, 255, .9)',
+            centerText: '#fff'
+        } : {
+            grid: 'rgba(157, 190, 169, .055)',
+            edge: 'rgba(120, 197, 177, .2)',
+            selectedEdge: 'rgba(198, 243, 107, .55)',
+            nodeHalo: 'rgba(67, 197, 162, .16)',
+            selectedHalo: 'rgba(198, 243, 107, .23)',
+            node: '#42c7a2',
+            selectedNode: '#c6f36b',
+            nodeStroke: 'rgba(220, 255, 242, .72)',
+            selectedStroke: '#efffb9',
+            nodeText: '#102019',
+            label: '#a9c5b7',
+            selectedLabel: '#e9f7d9',
+            centerHalo: 'rgba(198, 243, 107, .13)',
+            center: '#c6f36b',
+            centerStroke: 'rgba(239, 255, 185, .9)',
+            centerText: '#182216'
+        };
         ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
         ctx.clearRect(0, 0, state.width, state.height);
         ctx.save();
@@ -51,7 +87,7 @@
         ctx.scale(state.zoom, state.zoom);
 
         const gridRadius = Math.max(state.width, state.height) / state.zoom;
-        ctx.strokeStyle = 'rgba(157, 190, 169, .055)';
+        ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1 / state.zoom;
         for (let radius = 120; radius < gridRadius; radius += 120) {
             ctx.beginPath();
@@ -63,7 +99,7 @@
             ctx.beginPath();
             ctx.moveTo(0, 0);
             ctx.lineTo(node.x, node.y);
-            ctx.strokeStyle = node === state.hover ? 'rgba(198, 243, 107, .55)' : 'rgba(120, 197, 177, .2)';
+            ctx.strokeStyle = node === state.hover ? colors.selectedEdge : colors.edge;
             ctx.lineWidth = (node === state.hover ? 1.7 : 1) / state.zoom;
             ctx.stroke();
         });
@@ -72,22 +108,22 @@
             const selected = node === state.hover;
             ctx.beginPath();
             ctx.arc(node.x, node.y, nodeRadius + (selected ? 3 : 0), 0, Math.PI * 2);
-            ctx.fillStyle = selected ? 'rgba(198, 243, 107, .23)' : 'rgba(67, 197, 162, .16)';
+            ctx.fillStyle = selected ? colors.selectedHalo : colors.nodeHalo;
             ctx.fill();
             ctx.beginPath();
             ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
-            ctx.fillStyle = selected ? '#c6f36b' : '#42c7a2';
+            ctx.fillStyle = selected ? colors.selectedNode : colors.node;
             ctx.fill();
-            ctx.strokeStyle = selected ? '#efffb9' : 'rgba(220, 255, 242, .72)';
+            ctx.strokeStyle = selected ? colors.selectedStroke : colors.nodeStroke;
             ctx.lineWidth = 1.5 / state.zoom;
             ctx.stroke();
 
-            ctx.fillStyle = '#102019';
+            ctx.fillStyle = colors.nodeText;
             ctx.font = `600 ${10 / state.zoom}px "DM Mono", monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(node.label.slice(-3), node.x, node.y);
-            ctx.fillStyle = selected ? '#e9f7d9' : '#a9c5b7';
+            ctx.fillStyle = selected ? colors.selectedLabel : colors.label;
             ctx.font = `${11 / state.zoom}px "DM Mono", monospace`;
             ctx.textAlign = 'left';
             ctx.fillText(node.label, node.x + nodeRadius + 9 / state.zoom, node.y + 4 / state.zoom);
@@ -95,16 +131,16 @@
 
         ctx.beginPath();
         ctx.arc(0, 0, 33, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(198, 243, 107, .13)';
+        ctx.fillStyle = colors.centerHalo;
         ctx.fill();
         ctx.beginPath();
         ctx.arc(0, 0, 25, 0, Math.PI * 2);
-        ctx.fillStyle = '#c6f36b';
+        ctx.fillStyle = colors.center;
         ctx.fill();
-        ctx.strokeStyle = 'rgba(239, 255, 185, .9)';
+        ctx.strokeStyle = colors.centerStroke;
         ctx.lineWidth = 1.5 / state.zoom;
         ctx.stroke();
-        ctx.fillStyle = '#182216';
+        ctx.fillStyle = colors.centerText;
         ctx.font = `600 ${9 / state.zoom}px "DM Mono", monospace`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -208,6 +244,7 @@
 
     window.addEventListener('resize', resize);
     document.addEventListener('site-language-change', draw);
+    document.addEventListener('site-theme-change', draw);
     new ResizeObserver(resize).observe(viewport);
 
     window.networkConstellation = {
