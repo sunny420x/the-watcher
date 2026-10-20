@@ -68,3 +68,10 @@ CREATE TABLE IF NOT EXISTS scan_queue_jobs (
     KEY idx_scan_queue_status_created (status, created_at),
     KEY idx_scan_queue_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS scan_summary_refresh (
+    id TINYINT UNSIGNED NOT NULL,
+    refreshed_at DATETIME NULL,
+
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

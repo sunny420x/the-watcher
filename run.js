@@ -797,10 +797,30 @@ async function refreshScanSummary() {
     }
 }
 
+async function getScanSummaryRefreshAvailableAt() {
+    await db.execute(`
+        INSERT IGNORE INTO scan_summary_refresh (id, refreshed_at)
+        VALUES (1, NULL)
+    `);
+    const [[row]] = await db.execute(`
+        SELECT
+            UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 7 DAY)) * 1000 AS available_at_ms,
+            DATE_ADD(refreshed_at, INTERVAL 7 DAY) > CURRENT_TIMESTAMP AS is_locked
+        FROM scan_summary_refresh
+        WHERE id = 1
+    `);
+    if (row.available_at_ms === null || row.available_at_ms === undefined) return null;
+    const availableAt = new Date(Number(row.available_at_ms));
+    return Boolean(row.is_locked) ? availableAt : null;
+}
+
 async function renderScanSummary(req, res) {
     try {
-        const summary = scanSummaryCache || await refreshScanSummary();
-        res.render('summary.ejs', summary);
+        const [summary, refreshAvailableAt] = await Promise.all([
+            scanSummaryCache ? Promise.resolve(scanSummaryCache) : refreshScanSummary(),
+            getScanSummaryRefreshAvailableAt()
+        ]);
+        res.render('summary.ejs', { ...summary, refreshAvailableAt });
     } catch (error) {
         console.error('Scan summary page error:', error);
         res.status(500).send('Could not load the scan summary.');
@@ -813,12 +833,40 @@ app.get('/search', renderSearchPage);
 app.get('/summary', renderScanSummary);
 
 app.post('/summary/refresh', async (req, res) => {
+    let connection;
     try {
+        connection = await db.getConnection();
+        await connection.beginTransaction();
+        await connection.execute(`
+            INSERT IGNORE INTO scan_summary_refresh (id, refreshed_at)
+            VALUES (1, NULL)
+        `);
+        const [[row]] = await connection.execute(`
+            SELECT
+                UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 7 DAY)) * 1000 AS available_at_ms,
+                DATE_ADD(refreshed_at, INTERVAL 7 DAY) > CURRENT_TIMESTAMP AS is_locked
+            FROM scan_summary_refresh
+            WHERE id = 1
+            FOR UPDATE
+        `);
+        if (row.is_locked) {
+            await connection.rollback();
+            return res.redirect(303, '/summary');
+        }
         await refreshScanSummary();
+        await connection.execute(`
+            UPDATE scan_summary_refresh
+            SET refreshed_at = CURRENT_TIMESTAMP
+            WHERE id = 1
+        `);
+        await connection.commit();
         res.redirect(303, '/summary');
     } catch (error) {
+        if (connection) await connection.rollback().catch(() => {});
         console.error('Could not refresh the scan summary:', error);
         res.status(500).send('Could not refresh the scan summary.');
+    } finally {
+        if (connection) connection.release();
     }
 });
 

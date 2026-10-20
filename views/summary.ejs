@@ -23,9 +23,14 @@
             <p data-en-text="Overview of the hosts and services currently recorded in the scan index." data-th-text="ภาพรวมโฮสต์และบริการที่บันทึกไว้ในดัชนีการสแกน">Overview of the hosts and services currently recorded in the scan index.</p>
             <div class="summary-heading-actions">
                 <span class="summary-cache-status"><span data-en-text="Cached at" data-th-text="แคชเมื่อ">Cached at</span> <time data-localized-date="<%= summarizedAt.toISOString() %>"><%= summarizedAt.toLocaleString() %></time></span>
-                <form class="summary-refresh-form" method="post" action="/summary/refresh">
-                    <button class="summary-refresh-button" type="submit" data-en-text="Re-summarize" data-th-text="สรุปใหม่">Re-summarize</button>
-                </form>
+                <div class="summary-refresh-controls">
+                    <form class="summary-refresh-form" method="post" action="/summary/refresh">
+                        <button class="summary-refresh-button" type="submit" <%= refreshAvailableAt ? 'disabled' : '' %> data-en-text="Re-summarize" data-th-text="สรุปใหม่">Re-summarize</button>
+                    </form>
+                    <% if (refreshAvailableAt) { %>
+                        <span id="summary-refresh-countdown" class="summary-refresh-countdown" data-unlock-at="<%= refreshAvailableAt.getTime() %>" data-en-template="Available again in {time}" data-th-template="กดได้อีกครั้งใน {time}"></span>
+                    <% } %>
+                </div>
             </div>
         </header>
 
@@ -81,6 +86,7 @@
             <p class="summary-note" data-en-text="Each IP is counted once. When a title matches more than one keyword, the category with the highest match priority is used." data-th-text="นับแต่ละ IP เพียงครั้งเดียว หาก Title ตรงกับหลายคีย์เวิร์ด จะใช้หมวดที่มีลำดับความสำคัญสูงสุด">Each IP is counted once. When a title matches more than one keyword, the category with the highest match priority is used.</p>
         </section>
     </main>
+    <script src="/js/summary.js"></script>
 </body>
 
 </html>

@@ -40,7 +40,12 @@
         'ERROR': 'ข้อผิดพลาด',
         'DIRECTORY': 'รายการไฟล์',
         'OPEN PORT': 'พอร์ตเปิด',
-        'NSFW': 'เนื้อหาสำหรับผู้ใหญ่'
+        'Pornography': 'เนื้อหาสำหรับผู้ใหญ่',
+        'Gambling': 'การพนัน',
+        'Malware': 'มัลแวร์',
+        'Phishing': 'ฟิชชิ่ง',
+        'Suspicious': 'น่าสงสัย',
+        'Other': 'อื่น ๆ'
     };
     let language = 'en';
 

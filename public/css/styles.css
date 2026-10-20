@@ -1188,6 +1188,12 @@ html[data-theme="light"] .skeleton-block {
     margin: 0;
 }
 
+.summary-refresh-controls {
+    display: grid;
+    justify-items: end;
+    gap: 6px;
+}
+
 .summary-refresh-button {
     min-height: 38px;
     padding: 0 13px;
@@ -1201,6 +1207,19 @@ html[data-theme="light"] .skeleton-block {
 
 .summary-refresh-button:hover {
     filter: brightness(1.08);
+}
+
+.summary-refresh-button:disabled {
+    border-color: var(--line);
+    color: var(--muted);
+    background: var(--surface-raised);
+    cursor: not-allowed;
+    filter: none;
+}
+
+.summary-refresh-countdown {
+    color: var(--muted);
+    font: 10px "DM Mono", monospace;
 }
 
 .summary-metrics {
