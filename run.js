@@ -724,11 +724,8 @@ async function buildScanSummary() {
             ORDER BY match_priority, keyword
         `);
 
-        const keywordGroups = new Map();
         const categoryPriorities = new Map();
         keywordRows.forEach(row => {
-            if (!keywordGroups.has(row.category)) keywordGroups.set(row.category, []);
-            keywordGroups.get(row.category).push(row.keyword);
             if (!categoryPriorities.has(row.category)) {
                 categoryPriorities.set(row.category, Number(row.match_priority));
             }
@@ -765,7 +762,6 @@ async function buildScanSummary() {
         const categoryRows = [...categoryPriorities.entries()].map(([category, priority]) => ({
             category,
             priority,
-            keywords: keywordGroups.get(category) || [],
             ipCount: countsByPriority.get(priority) || 0
         }));
         [
@@ -773,7 +769,7 @@ async function buildScanSummary() {
             { category: 'No Title', priority: 1000 }
         ].forEach(({ category, priority }) => {
             const ipCount = countsByPriority.get(priority) || 0;
-            if (ipCount > 0) categoryRows.push({ category, priority, keywords: [], ipCount });
+            if (ipCount > 0) categoryRows.push({ category, priority, ipCount });
         });
 
         categoryRows.sort((left, right) =>
