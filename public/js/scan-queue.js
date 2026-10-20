@@ -6,6 +6,13 @@
     const historyContainer = document.getElementById('queue-history');
     const refreshStatus = document.getElementById('queue-refresh-status');
     let requestPending = false;
+    let refreshTimer = null;
+    let refreshInProgress = false;
+    let refreshQueued = false;
+    let activeWork = false;
+    const ACTIVE_REFRESH_INTERVAL_MS = 3000;
+    const IDLE_REFRESH_INTERVAL_MS = 10000;
+    const ERROR_REFRESH_INTERVAL_MS = 5000;
     const translate = (english, thai, values) => window.siteTranslate(english, thai, values);
     const currentLocale = () => window.siteLanguage() === 'th' ? 'th-TH' : 'en-US';
 
@@ -123,7 +130,28 @@
         }
     }
 
+    function scheduleRefresh(delay) {
+        if (refreshTimer) window.clearTimeout(refreshTimer);
+        refreshTimer = null;
+        if (!document.hidden) {
+            refreshTimer = window.setTimeout(() => {
+                refreshTimer = null;
+                refresh();
+            }, delay);
+        }
+    }
+
     async function refresh() {
+        if (refreshTimer) window.clearTimeout(refreshTimer);
+        refreshTimer = null;
+        if (document.hidden) return;
+        if (refreshInProgress) {
+            refreshQueued = true;
+            return;
+        }
+
+        refreshInProgress = true;
+        let nextDelay = ERROR_REFRESH_INTERVAL_MS;
         try {
             const response = await fetch('/api/scan-queue', { cache: 'no-store' });
             if (!response.ok) throw new Error('Could not load scan status.');
@@ -131,12 +159,22 @@
             renderActive(data);
             renderHistory(data.jobs);
             updateForm(data);
+            activeWork = data.jobs.some(job => ['queued', 'running'].includes(job.status)) ||
+                Boolean(data.activeScanRange || data.pendingScanRange);
+            nextDelay = activeWork ? ACTIVE_REFRESH_INTERVAL_MS : IDLE_REFRESH_INTERVAL_MS;
             const time = new Intl.DateTimeFormat(currentLocale(), { timeStyle: 'medium' }).format(new Date());
             refreshStatus.textContent = translate('Updated {time}', 'อัปเดต {time}', { time });
             refreshStatus.classList.remove('is-error');
         } catch (error) {
             refreshStatus.textContent = window.siteLocalizeMessage('Could not connect to scan status.');
             refreshStatus.classList.add('is-error');
+            activeWork = true;
+        } finally {
+            refreshInProgress = false;
+            if (!document.hidden) {
+                scheduleRefresh(refreshQueued ? 0 : nextDelay);
+            }
+            refreshQueued = false;
         }
     }
 
@@ -174,6 +212,13 @@
     });
 
     refresh();
-    window.setInterval(refresh, 1500);
     document.addEventListener('site-language-change', refresh);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (refreshTimer) window.clearTimeout(refreshTimer);
+            refreshTimer = null;
+        } else {
+            refresh();
+        }
+    });
 })();

@@ -21,6 +21,7 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 const MAX_SEARCH_TITLE_LENGTH = 512;
+const NEGATIVE_SCAN_CACHE_TTL_DAYS = 7;
 
 let scanQueueWorkerRunning = false;
 let activeScanRange = null;
@@ -300,11 +301,12 @@ async function performScan(ip_range) {
     return { open_ip, open_ssh, open_ftp, open_rtsp };
 }
 
-function hasCachedScanData(cached) {
+function isReusableScanCache(cached) {
     if (!cached) return false;
-    return ['open_ip', 'open_ssh', 'open_ftp', 'open_rtsp'].some(service =>
+    const hasFindings = ['open_ip', 'open_ssh', 'open_ftp', 'open_rtsp'].some(service =>
         Array.isArray(cached[service]) && cached[service].length > 0
     );
+    return hasFindings || Boolean(cached.negative_cache_valid);
 }
 
 function parseSubnetPrefix(value) {
@@ -409,11 +411,11 @@ async function runScanQueueWorker() {
                     );
                     const result = await withExclusiveScan(ip_range, async () => {
                         const cached = await getScanCache(ip_range);
-                        if (hasCachedScanData(cached)) return { skipped: true };
+                        if (isReusableScanCache(cached)) return { skipped: true };
                         await performScan(ip_range);
                         return { skipped: false };
                     });
-                    if (result.skipped) console.log(`[QUEUE SKIP] ${ip_range} already has scan data`);
+                    if (result.skipped) console.log(`[QUEUE CACHE] ${ip_range} reused cached results`);
                     await db.execute(`
                         UPDATE scan_queue_jobs
                         SET completed_ranges = LEAST(completed_ranges + 1, total_ranges),
@@ -487,7 +489,8 @@ async function getScanCache(ip_range) {
             open_ssh,
             open_ftp,
             open_rtsp,
-            scanned_at
+            scanned_at,
+            scanned_at >= DATE_SUB(CURRENT_TIMESTAMP, INTERVAL ${NEGATIVE_SCAN_CACHE_TTL_DAYS} DAY) AS negative_cache_valid
         FROM scan_cache
         WHERE ip_range = ?
         LIMIT 1
@@ -519,7 +522,8 @@ async function getScanCache(ip_range) {
             ? JSON.parse(row.open_rtsp)
             : row.open_rtsp,
 
-        scanned_at: row.scanned_at
+        scanned_at: row.scanned_at,
+        negative_cache_valid: Boolean(row.negative_cache_valid)
     };
 }
 
@@ -531,12 +535,6 @@ async function saveScanCache(
     open_rtsp
 ) {
     if (!ip_range || !open_ip || !open_ssh || !open_ftp || !open_rtsp) {
-        return;
-    }
-
-    if ([open_ip, open_ssh, open_ftp, open_rtsp].every(
-        results => results.length === 0
-    )) {
         return;
     }
 
@@ -946,7 +944,7 @@ app.get('/run/:range', async (req, res) => {
     try {
         const payload = await withExclusiveScan(ip_range, async () => {
             const cached = await getScanCache(ip_range);
-            if (cached) {
+            if (isReusableScanCache(cached)) {
                 console.log(`[CACHE] ${ip_range}`);
                 return {
                     data: {
