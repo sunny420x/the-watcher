@@ -1178,6 +1178,7 @@ Scanner Results
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+    background: var(--panel);
 }
 
 .index-table th {
