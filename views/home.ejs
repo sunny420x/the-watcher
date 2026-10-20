@@ -258,36 +258,47 @@
             });
         }
 
-        function nmap(ip) {
+        function showToolProgress(title) {
             Swal.fire({
-                title: 'Running Nmap...',
-                didOpen: () => {
-                    Swal.showLoading()
-                },
-                allowOutsideClick: false
+                toast: true,
+                position: 'bottom-end',
+                title,
+                didOpen: () => Swal.showLoading(),
+                showConfirmButton: false,
+                background: '#17211b',
+                color: '#dce8dc'
             });
-            fetch('/nmap/' + ip)
-                .then(response => response.json())
-                .then(data => {
-                    Swal.close();
-                    Swal.fire({
-                        title: 'Nmap Result',
-                        html: `<textarea readonly style="width:100%;height:400px;">${data.stdout}</textarea>`,
-                        width: 800,
-                        confirmButtonText: 'Close'
-                    });
+        }
+
+        function showToolOutput(title, outputText) {
+            const output = document.createElement('textarea');
+            output.readOnly = true;
+            output.style.cssText = 'width:100%;height:400px;';
+            output.value = outputText || 'No output returned.';
+            Swal.fire({
+                title,
+                html: output,
+                width: 800,
+                confirmButtonText: 'Close'
+            });
+        }
+
+        function nmap(ip) {
+            showToolProgress('Running Nmap...');
+            fetch('/nmap/' + encodeURIComponent(ip))
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Nmap request failed.');
+                    return data;
                 })
+                .then(data => showToolOutput('Nmap Result', data.stdout))
                 .catch(error => {
-                    console.error('Error:', error);
+                    Swal.fire({ title: 'Nmap failed', text: error.message, icon: 'error' });
                 });
         }
 
         function whois(ip) {
-            Swal.fire({
-                title: 'Looking up WHOIS...',
-                didOpen: () => Swal.showLoading(),
-                allowOutsideClick: false
-            });
+            showToolProgress('Looking up WHOIS...');
 
             fetch('/whois/' + encodeURIComponent(ip))
                 .then(async response => {
@@ -296,12 +307,7 @@
                     return data;
                 })
                 .then(data => {
-                    Swal.fire({
-                        title: `WHOIS · ${ip}`,
-                        html: `<textarea readonly style="width:100%;height:400px;">${data.stdout || 'No WHOIS data returned.'}</textarea>`,
-                        width: 800,
-                        confirmButtonText: 'Close'
-                    });
+                    showToolOutput(`WHOIS · ${ip}`, data.stdout || 'No WHOIS data returned.');
                 })
                 .catch(error => {
                     Swal.fire({ title: 'WHOIS lookup failed', text: error.message, icon: 'error' });
@@ -309,26 +315,16 @@
         }
 
         function rtsp(ip) {
-            Swal.fire({
-                title: 'Running Nmap...',
-                didOpen: () => {
-                    Swal.showLoading()
-                },
-                allowOutsideClick: false
-            });
-            fetch('/rtsp/' + ip)
-                .then(response => response.json())
-                .then(data => {
-                    Swal.close();
-                    Swal.fire({
-                        title: 'RTSP Result',
-                        html: `<textarea readonly style="width:100%;height:400px;">${data.stdout}</textarea>`,
-                        width: 800,
-                        confirmButtonText: 'Close'
-                    });
+            showToolProgress('Running RTSP check...');
+            fetch('/rtsp/' + encodeURIComponent(ip))
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'RTSP request failed.');
+                    return data;
                 })
+                .then(data => showToolOutput('RTSP Result', data.stdout))
                 .catch(error => {
-                    console.error('Error:', error);
+                    Swal.fire({ title: 'RTSP check failed', text: error.message, icon: 'error' });
                 });
         }
     </script>
