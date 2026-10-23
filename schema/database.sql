@@ -26,6 +26,7 @@ CREATE TABLE scan_search_index (
     service VARCHAR(16) NOT NULL,
     port SMALLINT UNSIGNED NOT NULL,
     title VARCHAR(512) NULL,
+    page_size BIGINT UNSIGNED NULL,
     scanned_at DATETIME NOT NULL,
 
     PRIMARY KEY (id),

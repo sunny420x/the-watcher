@@ -18,6 +18,7 @@
                         <th data-en-text="Port" data-th-text="พอร์ต" style="width: 80px;">Port</th>
                     <% } %>
                     <th data-en-text="Title" data-th-text="Title">Title</th>
+                    <th data-en-text="Page size" data-th-text="ขนาดหน้าเว็บ" style="width: 110px;">Page size</th>
                 </tr>
             </thead>
             <tbody>
@@ -36,6 +37,7 @@
                             <td><%= result.port %></td>
                         <% } %>
                         <td class="index-title"><%= result.title || '—' %></td>
+                        <td><%= formatPageSize(result.page_size) %></td>
                     </tr>
                 <% }) %>
             </tbody>

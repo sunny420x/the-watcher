@@ -57,6 +57,7 @@
       "ip_address": "192.0.2.12",
       "service": "web",
       "port": 80,
+      "page_size": 16384,
       "title": "Welcome to nginx!",
       "scanned_at": "2026-10-23T03:00:00.000Z"
     }
@@ -86,13 +87,14 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["ip_range", "host", "ip_address", "service", "port", "title", "scanned_at"],
+        "required": ["ip_range", "host", "ip_address", "service", "port", "page_size", "title", "scanned_at"],
         "properties": {
           "ip_range": { "type": "string" },
           "host": { "type": "string" },
           "ip_address": { "type": ["string", "null"] },
           "service": { "type": "string", "enum": ["web", "ssh", "ftp", "rtsp"] },
           "port": { "type": "integer" },
+          "page_size": { "type": ["integer", "null"], "minimum": 0, "description": "Downloaded response body size in bytes; null when unavailable." },
           "title": { "type": ["string", "null"] },
           "scanned_at": { "type": "string", "format": "date-time" }
         }

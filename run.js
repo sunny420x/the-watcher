@@ -4,7 +4,7 @@ const express = require('express')
 const app = express()
 const path = require('path');
 const bodyParser = require('body-parser')
-const { exec, execFile } = require('child_process');
+const { execFile } = require('child_process');
 const mysql = require('mysql2/promise');
 const { syncDatabaseSchema } = require('./schema/migrate');
 
@@ -145,9 +145,9 @@ async function findWebServer(ip) {
     const isOpen = await scanPort(host, port);
 
     if (isOpen) {
-        const title = await getWebServerTitle(host);
-        if(title) {
-            return { host: `http://${host}`, title: title }
+        const page = await getWebServerTitle(host);
+        if (page && page.title) {
+            return { host: `http://${host}`, title: page.title, page_size: page.page_size }
         } else {
             return 0;
         }
@@ -156,29 +156,34 @@ async function findWebServer(ip) {
 
 async function getWebServerTitle(ip) {
     return new Promise((resolve) => {
-        exec(
-            `curl -Ls http://${ip}`,
-            { timeout: 5000 },
-            (error, stdout) => {
-                if (error) {
-                    return exec(
-                        `curl -Ls https://${ip}`,
-                        { timeout: 5000 },
-                        (error, stdout) => {
-                            if (error) {
-                                return resolve(null);
-                            }
+        const sizeMarker = '\n__WATCHER_PAGE_SIZE__';
+        const fetchPage = (url, callback) => {
+            execFile('curl', [
+                '-Ls',
+                '--max-time', '5',
+                '--write-out', `${sizeMarker}%{size_download}`,
+                url
+            ], { timeout: 6000, maxBuffer: 5 * 1024 * 1024 }, (error, stdout) => {
+                if (error) return callback(error);
+                const markerIndex = stdout.lastIndexOf(sizeMarker);
+                if (markerIndex < 0) return callback(new Error('The response size was not returned.'));
 
-                            const match = stdout.match(/<title[^>]*>([^<]*)<\/title>/i);
-                            resolve(match ? match[1].trim() : null);
-                        }
-                    );
-                }
+                const body = stdout.slice(0, markerIndex);
+                const pageSize = Number(stdout.slice(markerIndex + sizeMarker.length).trim());
+                const match = body.match(/<title[^>]*>([^<]*)<\/title>/i);
+                callback(null, {
+                    title: match ? match[1].trim() : null,
+                    page_size: Number.isSafeInteger(pageSize) && pageSize >= 0 ? pageSize : null
+                });
+            });
+        };
 
-                const match = stdout.match(/<title[^>]*>([^<]*)<\/title>/i);
-                resolve(match ? match[1].trim() : null);
-            }
-        );
+        fetchPage(`http://${ip}`, (httpError, page) => {
+            if (!httpError) return resolve(page);
+            fetchPage(`https://${ip}`, (httpsError, httpsPage) => {
+                resolve(httpsError ? null : httpsPage);
+            });
+        });
     });
 }
 
@@ -496,6 +501,22 @@ function getClientIPv4(req) {
     return net.isIPv4(address) ? address : '127.0.0.1';
 }
 
+function formatPageSize(value) {
+    if (value === null || value === undefined) return '—';
+    const bytes = Number(value);
+    if (!Number.isFinite(bytes) || bytes < 0) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+
+    const units = ['KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = -1;
+    do {
+        size /= 1024;
+        unitIndex += 1;
+    } while (size >= 1024 && unitIndex < units.length - 1);
+    return `${size.toFixed(size >= 10 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
 async function getScanCache(ip_range) {
     const [rows] = await db.execute(
         `
@@ -571,7 +592,11 @@ async function saveScanCache(
             ip_address,
             'web',
             80,
-            title || null
+            title || null,
+            result.page_size !== null && result.page_size !== undefined
+                && Number.isSafeInteger(Number(result.page_size)) && Number(result.page_size) >= 0
+                ? Number(result.page_size)
+                : null
         ]);
     });
 
@@ -582,7 +607,7 @@ async function saveScanCache(
     ].forEach(([service, port, hosts]) => {
         hosts.forEach(host => {
             if (typeof host !== 'string' || !host) return;
-            observations.push([ip_range, host, host, service, port, null]);
+            observations.push([ip_range, host, host, service, port, null, null]);
         });
     });
 
@@ -624,12 +649,12 @@ async function saveScanCache(
         );
 
         if (observations.length > 0) {
-            const rowPlaceholders = observations.map(() => '(?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
+            const rowPlaceholders = observations.map(() => '(?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)').join(', ');
             const values = observations.flat();
             await connection.execute(
                 `
                 INSERT INTO scan_search_index
-                    (ip_range, host, ip_address, service, port, title, scanned_at)
+                    (ip_range, host, ip_address, service, port, title, page_size, scanned_at)
                 VALUES ${rowPlaceholders}
                 `,
                 values
@@ -679,7 +704,7 @@ async function renderSearchPage(req, res) {
 
             const [rows] = await db.execute(
                 `
-                SELECT ip_range, host, ip_address, service, port, title, scanned_at
+                SELECT ip_range, host, ip_address, service, port, title, page_size, scanned_at
                 FROM scan_search_index
                 ${where}
                 ORDER BY scanned_at DESC, ip_range, host
@@ -700,6 +725,7 @@ async function renderSearchPage(req, res) {
             pageSize,
             totalPages: Math.max(1, Math.ceil(total / pageSize)),
             hasSearch: conditions.length > 0,
+            formatPageSize,
             showWelcomeSplash: req.path === '/'
         };
         if (req.get('X-Requested-With') === 'XMLHttpRequest') {
@@ -987,7 +1013,7 @@ app.get('/api/search', async (req, res) => {
         const totalPages = Math.ceil(total / pageSize);
         const page = Math.min(requestedPage, Math.max(1, totalPages));
         const [rows] = await db.execute(`
-            SELECT ip_range, host, ip_address, service, port, title, scanned_at
+            SELECT ip_range, host, ip_address, service, port, title, page_size, scanned_at
             FROM scan_search_index
             ${where}
             ORDER BY scanned_at DESC, ip_range, host
@@ -1004,6 +1030,7 @@ app.get('/api/search', async (req, res) => {
                 ip_address: row.ip_address,
                 service: row.service,
                 port: Number(row.port),
+                page_size: row.page_size === null ? null : Number(row.page_size),
                 title: row.title,
                 scanned_at: new Date(row.scanned_at).toISOString()
             }))
