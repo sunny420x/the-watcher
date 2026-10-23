@@ -12,6 +12,19 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/js/theme.js"></script>
     <script src="/js/language.js"></script>
+    <% if (showWelcomeSplash) { %>
+        <script>
+            try {
+                if (localStorage.getItem('watcher-welcome-splash-seen') === '1') {
+                    document.documentElement.classList.add('welcome-splash-seen');
+                } else {
+                    localStorage.setItem('watcher-welcome-splash-seen', '1');
+                }
+            } catch (error) {
+                // Keep the first-visit splash available when storage is disabled.
+            }
+        </script>
+    <% } %>
     <link rel="stylesheet" href="/css/styles.css">
 </head>
 

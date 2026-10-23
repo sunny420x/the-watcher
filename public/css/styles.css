@@ -177,6 +177,10 @@ h1 em {
     animation: intro-splash-fade 2.2s ease forwards;
 }
 
+.welcome-splash-seen .intro-splash.is-welcome {
+    display: none;
+}
+
 .intro-splash-copy {
     padding: 24px;
     text-align: center;
@@ -1212,6 +1216,69 @@ html[data-theme="light"] .queue-pulse {
 
 .summary-shell {
     max-width: 1240px;
+}
+
+.api-shell {
+    max-width: 1100px;
+}
+
+.api-doc-panel {
+    line-height: 1.6;
+}
+
+.api-doc-panel > h2 {
+    margin: 30px 0 12px;
+    font-size: 19px;
+}
+
+.api-doc-panel > p:not(.eyebrow) {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.api-endpoint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 10px 13px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--input-bg);
+    overflow-wrap: anywhere;
+}
+
+.api-endpoint span {
+    color: var(--lime);
+    font: 500 11px "DM Mono", monospace;
+}
+
+.api-endpoint code,
+.api-params-table code {
+    color: var(--cyan);
+    font: 12px "DM Mono", monospace;
+}
+
+.api-params-table td {
+    vertical-align: top;
+}
+
+.api-code {
+    max-width: 100%;
+    margin: 0;
+    padding: 18px;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--table-cell);
+    background: var(--input-bg);
+    font: 11px/1.65 "DM Mono", monospace;
+    tab-size: 2;
+}
+
+.api-doc-note {
+    margin: 22px 0 0;
 }
 
 .summary-shell .search-heading > p:last-of-type {

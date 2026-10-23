@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title data-en-text="Public API | The Watcher" data-th-text="Public API | The Watcher">Public API | The Watcher</title>
+    <meta name="description" content="Search The Watcher network index using the public search API." data-en-content="Search The Watcher network index using the public search API." data-th-content="ค้นหาดัชนีเครือข่าย The Watcher ผ่าน Public Search API">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="api-page">
+    <%- include('components/navigator') %>
+    <main class="shell api-shell">
+        <header class="search-heading search-hero">
+            <p class="eyebrow" data-en-text="Developer access" data-th-text="สำหรับนักพัฒนา">Developer access</p>
+            <h1 data-en-text="Public Search API" data-th-text="Public Search API">Public Search API</h1>
+            <p data-en-text="Search hosts and services in The Watcher index. No API key is required." data-th-text="ค้นหาโฮสต์และบริการในดัชนี The Watcher โดยไม่ต้องใช้ API key">Search hosts and services in The Watcher index. No API key is required.</p>
+        </header>
+
+        <section class="api-doc-panel queue-panel">
+            <p class="eyebrow" data-en-text="Endpoint" data-th-text="ปลายทาง API">Endpoint</p>
+            <div class="api-endpoint"><span>GET</span><code>/api/search?search=nginx</code></div>
+            <p data-en-text="The endpoint is public and supports cross-origin GET requests." data-th-text="Endpoint นี้เปิดให้เรียกใช้งานสาธารณะ และรองรับ GET จากเว็บไซต์อื่น">The endpoint is public and supports cross-origin GET requests.</p>
+
+            <h2 data-en-text="Query parameters" data-th-text="พารามิเตอร์">Query parameters</h2>
+            <div class="index-table-wrap">
+                <table class="index-table api-params-table">
+                    <thead><tr><th data-en-text="Name" data-th-text="ชื่อ">Name</th><th data-en-text="Required" data-th-text="จำเป็น">Required</th><th data-en-text="Description" data-th-text="คำอธิบาย">Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>search</code></td><td>Yes</td><td data-en-text="Search term, up to 200 characters. Matches host, IP address, title, and IP range." data-th-text="คำค้นไม่เกิน 200 ตัวอักษร ค้นใน host, IP address, title และ IP range">Search term, up to 200 characters. Matches host, IP address, title, and IP range.</td></tr>
+                        <tr><td><code>service</code></td><td>No</td><td data-en-text="Filter by web, ssh, ftp, or rtsp." data-th-text="กรองตาม web, ssh, ftp หรือ rtsp">Filter by web, ssh, ftp, or rtsp.</td></tr>
+                        <tr><td><code>page</code></td><td>No</td><td data-en-text="1-based page number. Defaults to 1." data-th-text="หมายเลขหน้าเริ่มที่ 1 ค่าเริ่มต้นคือ 1">1-based page number. Defaults to 1.</td></tr>
+                        <tr><td><code>limit</code></td><td>No</td><td data-en-text="Results per page from 1 to 100. Defaults to 50." data-th-text="จำนวนผลลัพธ์ต่อหน้า ตั้งแต่ 1 ถึง 100 ค่าเริ่มต้นคือ 50">Results per page from 1 to 100. Defaults to 50.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2 data-en-text="Example request" data-th-text="ตัวอย่างการเรียกใช้">Example request</h2>
+            <pre class="api-code"><code>GET /api/search?search=nginx&amp;service=web&amp;page=1&amp;limit=20</code></pre>
+
+            <h2 data-en-text="Example response" data-th-text="ตัวอย่างผลลัพธ์">Example response</h2>
+            <pre class="api-code"><code>{
+  "query": { "search": "nginx", "service": "web", "page": 1, "limit": 20 },
+  "total": 1,
+  "totalPages": 1,
+  "results": [
+    {
+      "ip_range": "192.0.2",
+      "host": "http://192.0.2.12/",
+      "ip_address": "192.0.2.12",
+      "service": "web",
+      "port": 80,
+      "title": "Welcome to nginx!",
+      "scanned_at": "2026-10-23T03:00:00.000Z"
+    }
+  ]
+}</code></pre>
+
+            <h2 data-en-text="Response JSON Schema" data-th-text="JSON Schema ของผลลัพธ์">Response JSON Schema</h2>
+            <pre class="api-code"><code>{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SearchResponse",
+  "type": "object",
+  "required": ["query", "total", "totalPages", "results"],
+  "properties": {
+    "query": {
+      "type": "object",
+      "required": ["search", "service", "page", "limit"],
+      "properties": {
+        "search": { "type": "string" },
+        "service": { "type": ["string", "null"], "enum": ["web", "ssh", "ftp", "rtsp", null] },
+        "page": { "type": "integer", "minimum": 1 },
+        "limit": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+    "total": { "type": "integer", "minimum": 0 },
+    "totalPages": { "type": "integer", "minimum": 0 },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ip_range", "host", "ip_address", "service", "port", "title", "scanned_at"],
+        "properties": {
+          "ip_range": { "type": "string" },
+          "host": { "type": "string" },
+          "ip_address": { "type": ["string", "null"] },
+          "service": { "type": "string", "enum": ["web", "ssh", "ftp", "rtsp"] },
+          "port": { "type": "integer" },
+          "title": { "type": ["string", "null"] },
+          "scanned_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}</code></pre>
+
+            <p class="api-doc-note" data-en-text="Invalid parameters return HTTP 400 with { &quot;error&quot;: string }. Server errors return HTTP 500 with the same error shape." data-th-text="พารามิเตอร์ไม่ถูกต้องจะตอบ HTTP 400 ในรูปแบบ { &quot;error&quot;: string } ส่วนข้อผิดพลาดจากเซิร์ฟเวอร์ตอบ HTTP 500 ในรูปแบบเดียวกัน">Invalid parameters return HTTP 400 with { "error": string }. Server errors return HTTP 500 with the same error shape.</p>
+        </section>
+    </main>
+</body>
+
+</html>

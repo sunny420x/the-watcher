@@ -880,6 +880,10 @@ app.get('/search', renderSearchPage);
 
 app.get('/summary', renderScanSummary);
 
+app.get('/api', (req, res) => {
+    res.render('api.ejs');
+});
+
 app.post('/summary/refresh', async (req, res) => {
     let connection;
     try {
@@ -930,6 +934,84 @@ app.get('/take-a-walk', (req, res) => {
 
 app.get('/scan-queue', (req, res) => {
     res.render('scan-queue.ejs');
+});
+
+app.options('/api/search', (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.status(204).end();
+});
+
+app.get('/api/search', async (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*');
+
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+    if (!search) return res.status(400).json({ error: 'The search parameter is required.' });
+    if (search.length > 200) return res.status(400).json({ error: 'The search parameter must be 200 characters or fewer.' });
+
+    const services = ['web', 'ssh', 'ftp', 'rtsp'];
+    const service = typeof req.query.service === 'string' ? req.query.service : '';
+    if (service && !services.includes(service)) {
+        return res.status(400).json({ error: `The service parameter must be one of: ${services.join(', ')}.` });
+    }
+
+    const parseInteger = (value, fallback) => {
+        if (value === undefined) return fallback;
+        if (typeof value !== 'string' || !/^\d+$/.test(value)) return null;
+        const parsed = Number(value);
+        return Number.isSafeInteger(parsed) ? parsed : null;
+    };
+    const requestedPage = parseInteger(req.query.page, 1);
+    const pageSize = parseInteger(req.query.limit, 50);
+    if (!requestedPage || requestedPage > 10000) {
+        return res.status(400).json({ error: 'The page parameter must be between 1 and 10000.' });
+    }
+    if (!pageSize || pageSize > 100) {
+        return res.status(400).json({ error: 'The limit parameter must be between 1 and 100.' });
+    }
+
+    try {
+        const conditions = ['(host LIKE ? OR ip_address LIKE ? OR title LIKE ? OR ip_range LIKE ?)'];
+        const pattern = `%${search}%`;
+        const params = [pattern, pattern, pattern, pattern];
+        if (service) {
+            conditions.push('service = ?');
+            params.push(service);
+        }
+        const where = `WHERE ${conditions.join(' AND ')}`;
+        const [[countRow]] = await db.execute(
+            `SELECT COUNT(*) AS total FROM scan_search_index ${where}`,
+            params
+        );
+        const total = Number(countRow.total);
+        const totalPages = Math.ceil(total / pageSize);
+        const page = Math.min(requestedPage, Math.max(1, totalPages));
+        const [rows] = await db.execute(`
+            SELECT ip_range, host, ip_address, service, port, title, scanned_at
+            FROM scan_search_index
+            ${where}
+            ORDER BY scanned_at DESC, ip_range, host
+            LIMIT ? OFFSET ?
+        `, [...params, pageSize, (page - 1) * pageSize]);
+
+        res.json({
+            query: { search, service: service || null, page, limit: pageSize },
+            total,
+            totalPages,
+            results: rows.map(row => ({
+                ip_range: row.ip_range,
+                host: row.host,
+                ip_address: row.ip_address,
+                service: row.service,
+                port: Number(row.port),
+                title: row.title,
+                scanned_at: new Date(row.scanned_at).toISOString()
+            }))
+        });
+    } catch (error) {
+        console.error('Public search API error:', error);
+        res.status(500).json({ error: 'Could not search the network index.' });
+    }
 });
 
 app.get('/api/scan-queue', async (req, res) => {
