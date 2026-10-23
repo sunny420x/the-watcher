@@ -30,9 +30,10 @@ CREATE TABLE scan_search_index (
 
     PRIMARY KEY (id),
     UNIQUE KEY uq_range_host_service (ip_range, host, service, port),
-    KEY idx_ip_address (ip_address),
+    KEY idx_ip_address_service (ip_address, service),
     KEY idx_host (host),
     KEY idx_service_port (service, port),
+    KEY idx_service_scanned_at (service, scanned_at),
     KEY idx_scanned_at (scanned_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -72,6 +73,8 @@ CREATE TABLE IF NOT EXISTS scan_queue_jobs (
 CREATE TABLE IF NOT EXISTS scan_summary_refresh (
     id TINYINT UNSIGNED NOT NULL,
     refreshed_at DATETIME NULL,
+    summary_json LONGTEXT NULL,
+    summarized_at DATETIME NULL,
 
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

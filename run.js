@@ -63,13 +63,13 @@ app.get('/preview', async (req, res) => {
             return res.status(400).send('Only scanned HTTP hosts can be previewed.');
         }
 
-        const [rows] = await db.execute('SELECT open_ip FROM scan_cache');
-        const isScannedHost = rows.some(row => {
-            const hosts = typeof row.open_ip === 'string' ? JSON.parse(row.open_ip) : row.open_ip;
-            return Array.isArray(hosts) && hosts.some(host => {
-                try { return new URL(host.host).hostname === target.hostname; } catch { return false; }
-            });
-        });
+        const [[scannedHost]] = await db.execute(`
+            SELECT 1 AS found
+            FROM scan_search_index
+            WHERE ip_address = ? AND service = 'web'
+            LIMIT 1
+        `, [target.hostname]);
+        const isScannedHost = Boolean(scannedHost);
         if (!isScannedHost) return res.status(403).send('Host has not been found by a scan.');
 
         const upstream = await fetch(target, { signal: AbortSignal.timeout(8000), redirect: 'manual' });
@@ -785,16 +785,58 @@ async function buildScanSummary() {
         };
 }
 
-async function refreshScanSummary() {
+async function persistScanSummary(summary) {
+    await db.execute(`
+        INSERT IGNORE INTO scan_summary_refresh (id, refreshed_at)
+        VALUES (1, NULL)
+    `);
+    await db.execute(`
+        UPDATE scan_summary_refresh
+        SET summary_json = ?, summarized_at = ?
+        WHERE id = 1
+    `, [JSON.stringify(summary), summary.summarizedAt]);
+}
+
+async function buildAndPersistScanSummary() {
+    const summary = await buildScanSummary();
+    await persistScanSummary(summary);
+    scanSummaryCache = summary;
+    return summary;
+}
+
+async function getScanSummary() {
+    if (scanSummaryCache) return scanSummaryCache;
     if (scanSummaryRefreshPromise) return scanSummaryRefreshPromise;
 
-    const refreshPromise = buildScanSummary();
-    scanSummaryRefreshPromise = refreshPromise;
+    const summaryPromise = (async () => {
+        const [[row]] = await db.execute(`
+            SELECT summary_json, summarized_at
+            FROM scan_summary_refresh
+            WHERE id = 1
+        `);
+        if (row && row.summary_json) {
+            try {
+                const summary = typeof row.summary_json === 'string'
+                    ? JSON.parse(row.summary_json)
+                    : row.summary_json;
+                if (summary && summary.stats && Array.isArray(summary.categoryRows)) {
+                    summary.summarizedAt = row.summarized_at
+                        ? new Date(row.summarized_at)
+                        : new Date(summary.summarizedAt);
+                    scanSummaryCache = summary;
+                    return summary;
+                }
+            } catch (error) {
+                console.error('Could not read the saved scan summary; rebuilding it:', error);
+            }
+        }
+        return buildAndPersistScanSummary();
+    })();
+    scanSummaryRefreshPromise = summaryPromise;
     try {
-        scanSummaryCache = await refreshPromise;
-        return scanSummaryCache;
+        return await summaryPromise;
     } finally {
-        if (scanSummaryRefreshPromise === refreshPromise) scanSummaryRefreshPromise = null;
+        if (scanSummaryRefreshPromise === summaryPromise) scanSummaryRefreshPromise = null;
     }
 }
 
@@ -818,7 +860,7 @@ async function getScanSummaryRefreshAvailableAt() {
 async function renderScanSummary(req, res) {
     try {
         const [summary, refreshAvailableAt] = await Promise.all([
-            scanSummaryCache ? Promise.resolve(scanSummaryCache) : refreshScanSummary(),
+            getScanSummary(),
             getScanSummaryRefreshAvailableAt()
         ]);
         res.render('summary.ejs', { ...summary, refreshAvailableAt });
@@ -854,13 +896,16 @@ app.post('/summary/refresh', async (req, res) => {
             await connection.rollback();
             return res.redirect(303, '/summary');
         }
-        await refreshScanSummary();
+        const summary = await buildScanSummary();
         await connection.execute(`
             UPDATE scan_summary_refresh
-            SET refreshed_at = CURRENT_TIMESTAMP
+            SET refreshed_at = CURRENT_TIMESTAMP,
+                summary_json = ?,
+                summarized_at = ?
             WHERE id = 1
-        `);
+        `, [JSON.stringify(summary), summary.summarizedAt]);
         await connection.commit();
+        scanSummaryCache = summary;
         res.redirect(303, '/summary');
     } catch (error) {
         if (connection) await connection.rollback().catch(() => {});
