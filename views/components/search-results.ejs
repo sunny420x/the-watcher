@@ -8,21 +8,23 @@
         <span><%= total.toLocaleString('en-US') %> <span data-en-text="observation<%= total === 1 ? '' : 's' %>" data-th-text="รายการ">observations</span></span>
     </div>
     <div class="index-table-wrap">
-        <table class="index-table">
+        <table class="index-table search-results-table <%= selectedService === 'web' ? 'search-results-web-table' : '' %>">
             <thead>
                 <tr>
-                    <th data-en-text="Service" data-th-text="บริการ">Service</th>
-                    <th data-en-text="Host" data-th-text="โฮสต์">Host</th>
-                    <th data-en-text="Port" data-th-text="พอร์ต">Port</th>
+                    <th data-en-text="Service" data-th-text="บริการ" style="width: 80px;">Service</th>
+                    <th data-en-text="IP range" data-th-text="ช่วง IP" style="width: 150px;">IP range</th>
+                    <th data-en-text="Host" data-th-text="โฮสต์" style="width: 150px;">Host</th>
+                    <% if (selectedService !== 'web') { %>
+                        <th data-en-text="Port" data-th-text="พอร์ต" style="width: 80px;">Port</th>
+                    <% } %>
                     <th data-en-text="Title" data-th-text="Title">Title</th>
-                    <th data-en-text="IP range" data-th-text="ช่วง IP">IP range</th>
-                    <th data-en-text="Last scanned" data-th-text="สแกนล่าสุด">Last scanned</th>
                 </tr>
             </thead>
             <tbody>
                 <% results.forEach(result => { %>
                     <tr>
                         <td><span class="service-chip service-<%= result.service %>"><%= result.service %></span></td>
+                        <td><%= result.ip_range %>.0/24</td>
                         <td class="index-host">
                             <% if (result.service === 'web') { %>
                                 <a class="index-host-link" href="<%= result.host %>" target="_blank" rel="noopener noreferrer"><%= result.ip_address || result.host %></a>
@@ -30,10 +32,10 @@
                                 <%= result.ip_address || result.host %>
                             <% } %>
                         </td>
-                        <td><%= result.port %></td>
+                        <% if (selectedService !== 'web') { %>
+                            <td><%= result.port %></td>
+                        <% } %>
                         <td class="index-title"><%= result.title || '—' %></td>
-                        <td><%= result.ip_range %>.0/24</td>
-                        <td><%= result.scanned_at %></td>
                     </tr>
                 <% }) %>
             </tbody>

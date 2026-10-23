@@ -1717,6 +1717,11 @@ html[data-theme="light"] .queue-pulse {
     background: var(--panel);
 }
 
+.search-results-table {
+    min-width: 900px;
+    table-layout: fixed;
+}
+
 .index-table th {
     padding: 12px 14px;
     border-bottom: 1px solid var(--line);
@@ -1765,8 +1770,10 @@ html[data-theme="light"] .queue-pulse {
 }
 
 .index-title {
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: none !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    line-height: 1.55 !important;
 }
 
 .service-chip {
