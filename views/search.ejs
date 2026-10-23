@@ -16,11 +16,13 @@
 </head>
 
 <body class="search-page">
+    <%- include('components/page-loader') %>
     <%-include('components/navigator')%>
     <main class="shell search-shell">
-        <header class="search-heading">
+        <header class="search-heading search-hero">
+            <canvas class="search-hero-grid" aria-hidden="true"></canvas>
             <p class="eyebrow" data-en-text="Cyberspace search engine" data-th-text="สำรวจเครือข่ายอินเทอร์เน็ต">Cyberspace search engine</p>
-            <h1 data-en-text=" Explore Cyperspace." data-th-text="ค้นหาเว็บไซต์/บริการ"> Explore Cyperspace.</h1>
+            <h1 data-en-text="Explore Cyberspace." data-th-text="ค้นหาเว็บไซต์/บริการ">Explore Cyberspace.</h1>
             <p data-en-text="Find hosts and services recorded in the scan index." data-th-text="ค้นหาโฮสต์และบริการที่บันทึกไว้จากการสแกน">Find hosts and services recorded in the scan index.</p>
         </header>
 
@@ -44,60 +46,8 @@
             </div>
         </form>
 
-        <section class="index-results" aria-live="polite">
-            <% if (!hasSearch) { %>
-                <div class="index-empty-state" data-en-text="Enter a search term or choose a filter to explore the index." data-th-text="กรอกคำค้นหรือเลือกตัวกรองเพื่อค้นหาข้อมูล">Enter a search term or choose a filter to explore the index.</div>
-            <% } else if (total === 0) { %>
-                <div class="index-empty-state" data-en-text="No observations match these filters." data-th-text="ไม่พบข้อมูลที่ตรงกับตัวกรองนี้">No observations match these filters.</div>
-            <% } else { %>
-                <div class="index-results-heading">
-                    <h2 data-en-text="Results" data-th-text="ผลการค้นหา">Results</h2>
-                    <span><%= total.toLocaleString('en-US') %> <span data-en-text="observation<%= total === 1 ? '' : 's' %>" data-th-text="รายการ">observations</span></span>
-                </div>
-                <div class="index-table-wrap">
-                    <table class="index-table">
-                        <thead>
-                            <tr>
-                                <th data-en-text="Service" data-th-text="บริการ">Service</th>
-                                <th data-en-text="Host" data-th-text="โฮสต์">Host</th>
-                                <th data-en-text="Port" data-th-text="พอร์ต">Port</th>
-                                <th data-en-text="Title" data-th-text="Title">Title</th>
-                                <th data-en-text="IP range" data-th-text="ช่วง IP">IP range</th>
-                                <th data-en-text="Last scanned" data-th-text="สแกนล่าสุด">Last scanned</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% results.forEach(result => { %>
-                                <tr>
-                                    <td><span class="service-chip service-<%= result.service %>"><%= result.service %></span></td>
-                                    <td class="index-host">
-                                        <% if (result.service === 'web') { %>
-                                            <a class="index-host-link" href="<%= result.host %>" target="_blank" rel="noopener noreferrer"><%= result.ip_address || result.host %></a>
-                                        <% } else { %>
-                                            <%= result.ip_address || result.host %>
-                                        <% } %>
-                                    </td>
-                                    <td><%= result.port %></td>
-                                    <td class="index-title"><%= result.title || '—' %></td>
-                                    <td><%= result.ip_range %>.0/24</td>
-                                    <td><%= result.scanned_at %></td>
-                                </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-                <% if (totalPages > 1) { %>
-                    <nav class="index-pagination" aria-label="Search result pages" data-en-aria-label="Search result pages" data-th-aria-label="หน้าผลการค้นหา">
-                        <% if (page > 1) { %>
-                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&page=<%= page - 1 %>" data-en-text="Previous" data-th-text="ก่อนหน้า">Previous</a>
-                        <% } else { %><span></span><% } %>
-                        <span data-en-text="Page <%= page %> of <%= totalPages %>" data-th-text="หน้า <%= page %> จาก <%= totalPages %>">Page <%= page %> of <%= totalPages %></span>
-                        <% if (page < totalPages) { %>
-                            <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&page=<%= page + 1 %>" data-en-text="Next" data-th-text="ถัดไป">Next</a>
-                        <% } else { %><span></span><% } %>
-                    </nav>
-                <% } %>
-            <% } %>
+        <section id="index-results" class="index-results" aria-live="polite" aria-busy="false">
+            <%- include('components/search-results') %>
         </section>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -122,6 +72,8 @@
             input.value = query;
         });
     </script>
+    <script src="/js/search-hero.js" defer></script>
+    <script src="/js/search-results.js" defer></script>
 </body>
 
 </html>

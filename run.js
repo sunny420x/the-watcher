@@ -690,7 +690,7 @@ async function renderSearchPage(req, res) {
             results = rows;
         }
 
-        res.render('search.ejs', {
+        const viewData = {
             q,
             services,
             selectedService,
@@ -700,7 +700,11 @@ async function renderSearchPage(req, res) {
             pageSize,
             totalPages: Math.max(1, Math.ceil(total / pageSize)),
             hasSearch: conditions.length > 0
-        });
+        };
+        if (req.get('X-Requested-With') === 'XMLHttpRequest') {
+            return res.render('components/search-results.ejs', viewData);
+        }
+        res.render('search.ejs', viewData);
     } catch (err) {
         console.error('Search page error:', err);
         res.status(500).send('Could not load search results.');
