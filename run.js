@@ -699,7 +699,8 @@ async function renderSearchPage(req, res) {
             page,
             pageSize,
             totalPages: Math.max(1, Math.ceil(total / pageSize)),
-            hasSearch: conditions.length > 0
+            hasSearch: conditions.length > 0,
+            showWelcomeSplash: req.path === '/'
         };
         if (req.get('X-Requested-With') === 'XMLHttpRequest') {
             return res.render('components/search-results.ejs', viewData);

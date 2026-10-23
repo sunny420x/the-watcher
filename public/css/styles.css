@@ -171,10 +171,10 @@ h1 em {
     pointer-events: none;
 }
 
-.intro-splash.is-visible {
+.intro-splash.is-welcome {
     opacity: 1;
     visibility: visible;
-    pointer-events: auto;
+    animation: intro-splash-fade 2.2s ease forwards;
 }
 
 .intro-splash-copy {
@@ -182,7 +182,7 @@ h1 em {
     text-align: center;
 }
 
-.intro-splash.is-visible .intro-splash-copy {
+.intro-splash.is-welcome .intro-splash-copy {
     animation: intro-splash-arrive .5s ease-out both;
 }
 
@@ -210,6 +210,11 @@ h1 em {
 @keyframes intro-splash-arrive {
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes intro-splash-fade {
+    0%, 58% { opacity: 1; visibility: visible; }
+    100% { opacity: 0; visibility: hidden; }
 }
 
 @media (prefers-reduced-motion: reduce) {

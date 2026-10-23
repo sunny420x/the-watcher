@@ -16,7 +16,9 @@
 </head>
 
 <body class="search-page">
-    <%- include('components/page-loader') %>
+    <% if (showWelcomeSplash) { %>
+        <%- include('components/welcome-splash') %>
+    <% } %>
     <%-include('components/navigator')%>
     <main class="shell search-shell">
         <header class="search-heading search-hero">
