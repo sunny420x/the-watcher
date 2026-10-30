@@ -6,22 +6,68 @@
         </span>
     </a>
 
-    <div class="nav-links">
-        <a class="nav-link" href="/" data-en-text="Search" data-th-text="ค้นหา">Search</a>
-        <a class="nav-link" href="/take-a-walk" data-en-text="Take a Walk" data-th-text="ออกสำรวจ">Take a Walk</a>
-        <a class="nav-link" href="/summary" data-en-text="Summary" data-th-text="สรุปผล">Summary</a>
-        <a class="nav-link" href="/scan-queue" data-en-text="Scan queue" data-th-text="คิวสแกน">Scan queue</a>
-        <a class="nav-link" href="/redirects" data-en-text="Fix Redirects" data-th-text="แก้ Redirect">Fix Redirects</a>
-        <a class="nav-link" href="/api" data-en-text="API" data-th-text="API">API</a>
-        <button class="language-toggle" type="button" aria-label="Switch language to Thai" title="Switch language to Thai">ไทย</button>
-        <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
-            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <circle cx="12" cy="12" r="4"></circle>
-                <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
-            </svg>
-            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M20.2 15.5A8.5 8.5 0 0 1 8.5 3.8 8.5 8.5 0 1 0 20.2 15.5Z"></path>
-            </svg>
-        </button>
+    <div class="topbar-right">
+        <div class="nav-links" id="nav-links">
+            <a class="nav-link" href="/" data-en-text="Search" data-th-text="ค้นหา">Search</a>
+            <a class="nav-link" href="/take-a-walk" data-en-text="Take a Walk" data-th-text="ออกสำรวจ">Take a Walk</a>
+            <a class="nav-link" href="/summary" data-en-text="Summary" data-th-text="สรุปผล">Summary</a>
+            <a class="nav-link" href="/scan-queue" data-en-text="Scan queue" data-th-text="คิวสแกน">Scan queue</a>
+            <a class="nav-link" href="/redirects" data-en-text="Fix Redirects" data-th-text="แก้ Redirect">Fix Redirects</a>
+            <a class="nav-link" href="/api" data-en-text="API" data-th-text="API">API</a>
+        </div>
+
+        <div class="nav-controls">
+            <button class="language-toggle" type="button" aria-label="Switch language to Thai" title="Switch language to Thai">ไทย</button>
+            <button class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+                <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path>
+                </svg>
+                <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="20.2 15.5A8.5 8.5 0 0 1 8.5 3.8 8.5 8.5 0 1 0 20.2 15.5Z"></path>
+                </svg>
+            </button>
+            <button class="nav-hamburger" type="button" aria-label="Toggle navigation menu" aria-expanded="false" id="nav-hamburger">
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+            </button>
+        </div>
     </div>
 </nav>
+
+<script>
+(() => {
+    const hamburger = document.getElementById('nav-hamburger');
+    const navLinks = document.getElementById('nav-links');
+    if (!hamburger || !navLinks) return;
+
+    function toggleMenu(open) {
+        const isOpen = open !== undefined ? open : !navLinks.classList.contains('is-open');
+        navLinks.classList.toggle('is-open', isOpen);
+        hamburger.classList.toggle('is-open', isOpen);
+        hamburger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    hamburger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMenu();
+    });
+
+    navLinks.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => toggleMenu(false));
+    });
+
+    document.addEventListener('click', (e) => {
+        if (navLinks.classList.contains('is-open') && !navLinks.contains(e.target) && !hamburger.contains(e.target)) {
+            toggleMenu(false);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && navLinks.classList.contains('is-open')) {
+            toggleMenu(false);
+        }
+    });
+})();
+</script>

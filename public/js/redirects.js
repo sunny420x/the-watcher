@@ -89,7 +89,6 @@
                     <td class="col-host">
                         <div class="host-entry">
                             <a href="${host}" target="_blank" rel="noreferrer" class="host-link" title="${host}">${host}</a>
-                            <a href="/preview?url=${encodeURIComponent(host)}" target="_blank" class="host-preview-btn" title="Preview">👁</a>
                         </div>
                     </td>
                     <td class="col-range">
