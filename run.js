@@ -154,37 +154,216 @@ async function findWebServer(ip) {
     }
 }
 
-async function getWebServerTitle(ip) {
-    return new Promise((resolve) => {
-        const sizeMarker = '\n__WATCHER_PAGE_SIZE__';
-        const fetchPage = (url, callback) => {
-            execFile('curl', [
-                '-Ls',
-                '--max-time', '5',
-                '--write-out', `${sizeMarker}%{size_download}`,
-                url
-            ], { timeout: 6000, maxBuffer: 5 * 1024 * 1024 }, (error, stdout) => {
-                if (error) return callback(error);
-                const markerIndex = stdout.lastIndexOf(sizeMarker);
-                if (markerIndex < 0) return callback(new Error('The response size was not returned.'));
+const BROWSER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+const MAX_REDIRECT_HOPS = 4;
 
-                const body = stdout.slice(0, markerIndex);
-                const pageSize = Number(stdout.slice(markerIndex + sizeMarker.length).trim());
-                const match = body.match(/<title[^>]*>([^<]*)<\/title>/i);
-                callback(null, {
-                    title: match ? match[1].trim() : null,
-                    page_size: Number.isSafeInteger(pageSize) && pageSize >= 0 ? pageSize : null
-                });
-            });
-        };
+function decodeHtmlEntities(str) {
+    if (!str || typeof str !== 'string') return str;
+    return str
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#039;|&#39;|&apos;/gi, "'")
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&#(\d+);/g, (_, dec) => {
+            const num = parseInt(dec, 10);
+            return Number.isSafeInteger(num) ? String.fromCharCode(num) : '';
+        })
+        .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+            const num = parseInt(hex, 16);
+            return Number.isSafeInteger(num) ? String.fromCharCode(num) : '';
+        });
+}
 
-        fetchPage(`http://${ip}`, (httpError, page) => {
-            if (!httpError) return resolve(page);
-            fetchPage(`https://${ip}`, (httpsError, httpsPage) => {
-                resolve(httpsError ? null : httpsPage);
+function isRedirectTitle(title) {
+    if (!title || typeof title !== 'string') return false;
+    const t = title.trim().toLowerCase();
+    if (!t) return false;
+
+    const patterns = [
+        /^just a moment(?:\.\.\.|\.)?$/i,
+        /^redirecting(?:\.\.\.|\.)?/i,
+        /^redirect(?:ed)?(?:\.\.\.|\.)?$/i,
+        /^(?:301|302|303|307|308)\s+(?:moved|found|temporary|permanent)/i,
+        /^(?:document|object)\s+moved(?:\s+here)?(?:\.\.\.|\.)?$/i,
+        /^moved\s+(?:permanently|temporarily)/i,
+        /^found(?:\.\.\.|\.)?$/i,
+        /^please\s+wait(?:\.\.\.|\.)?$/i,
+        /^loading(?:\.\.\.|\.)?$/i,
+        /^one\s+moment(?:,\s*please)?(?:\.\.\.|\.)?$/i,
+        /^switching\s+protocols/i,
+        /^attention required!\s*\|\s*cloudflare/i
+    ];
+    return patterns.some(pattern => pattern.test(t));
+}
+
+function extractRedirectUrl(html) {
+    if (!html || typeof html !== 'string') return null;
+
+    // 1. Meta refresh: <meta http-equiv="refresh" content="0;url=/target">
+    const metaMatches = html.matchAll(/<meta\b[^>]*>/gi);
+    for (const match of metaMatches) {
+        const tag = match[0];
+        if (/http-equiv\s*=\s*["']?refresh["']?/i.test(tag)) {
+            const contentMatch = tag.match(/content\s*=\s*["']?[^"'>]*?url\s*=\s*['"]?([^"'\s;>]+)/i);
+            if (contentMatch && contentMatch[1]) {
+                const target = contentMatch[1].replace(/^['"]|['"]$/g, '').trim();
+                if (target) return target;
+            }
+        }
+    }
+
+    // 2. JavaScript location redirection
+    const jsPatterns = [
+        /(?:window\.)?location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/i,
+        /(?:window\.)?location\.replace\s*\(\s*['"]([^'"]+)['"]\s*\)/i,
+        /(?:window\.)?location\.assign\s*\(\s*['"]([^'"]+)['"]\s*\)/i,
+        /self\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/i,
+        /top\.location(?:\.href)?\s*=\s*['"]([^'"]+)['"]/i
+    ];
+    for (const pattern of jsPatterns) {
+        const jsMatch = html.match(pattern);
+        if (jsMatch && jsMatch[1]) {
+            const target = jsMatch[1].trim();
+            if (target && !target.toLowerCase().startsWith('javascript:')) {
+                return target;
+            }
+        }
+    }
+
+    // 3. Fallback links inside redirect notice pages
+    const linkMatch = html.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>(?:click here|here|redirect|continue|proceed|go)/i)
+        || html.match(/<a\b[^>]*href=["']([^"']+)["']/i);
+    if (linkMatch && linkMatch[1]) {
+        const target = linkMatch[1].trim();
+        if (target && !target.startsWith('#') && !target.toLowerCase().startsWith('javascript:')) {
+            return target;
+        }
+    }
+
+    return null;
+}
+
+function resolveSafeRedirectUrl(target, baseUrl) {
+    try {
+        const resolved = new URL(target, baseUrl);
+        if (resolved.protocol === 'http:' || resolved.protocol === 'https:') {
+            return resolved.href;
+        }
+    } catch { }
+    return null;
+}
+
+function fetchPageOnce(targetUrl) {
+    return new Promise((resolve, reject) => {
+        const sizeMarker = '\n__WATCHER_PAGE_SIZE__\n';
+        execFile('curl', [
+            '-Ls',
+            '-k',
+            '-A', BROWSER_USER_AGENT,
+            '-H', 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            '-H', 'Accept-Language: en-US,en;q=0.9',
+            '--max-redirs', '5',
+            '--max-time', '5',
+            '--write-out', `${sizeMarker}%{size_download}\n%{url_effective}`,
+            targetUrl
+        ], { timeout: 6000, maxBuffer: 5 * 1024 * 1024 }, (error, stdout) => {
+            if (error) return reject(error);
+            const markerIndex = stdout.lastIndexOf(sizeMarker);
+            if (markerIndex < 0) return reject(new Error('The response size was not returned.'));
+
+            const body = stdout.slice(0, markerIndex);
+            const metaInfo = stdout.slice(markerIndex + sizeMarker.length).trim().split('\n');
+            const pageSizeRaw = Number(metaInfo[0] ? metaInfo[0].trim() : NaN);
+            const effectiveUrl = metaInfo[1] ? metaInfo[1].trim() : targetUrl;
+
+            const match = body.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+            const rawTitle = match ? match[1].replace(/\s+/g, ' ').trim() : null;
+            const title = rawTitle ? decodeHtmlEntities(rawTitle) : null;
+
+            resolve({
+                body,
+                title,
+                page_size: Number.isSafeInteger(pageSizeRaw) && pageSizeRaw >= 0 ? pageSizeRaw : null,
+                effectiveUrl
             });
         });
     });
+}
+
+async function fetchPageWithRedirectResolution(initialUrl) {
+    let currentUrl = initialUrl;
+    const visited = new Set();
+    let bestResult = null;
+
+    for (let hop = 0; hop < MAX_REDIRECT_HOPS; hop++) {
+        if (!currentUrl || visited.has(currentUrl)) break;
+        visited.add(currentUrl);
+
+        try {
+            const result = await fetchPageOnce(currentUrl);
+            bestResult = result;
+
+            if (result.title && !isRedirectTitle(result.title)) {
+                return {
+                    title: result.title,
+                    page_size: result.page_size
+                };
+            }
+
+            const redirectTarget = extractRedirectUrl(result.body);
+            if (!redirectTarget) {
+                break;
+            }
+
+            const nextUrl = resolveSafeRedirectUrl(redirectTarget, result.effectiveUrl || currentUrl);
+            if (!nextUrl || visited.has(nextUrl)) {
+                break;
+            }
+
+            currentUrl = nextUrl;
+        } catch {
+            break;
+        }
+    }
+
+    if (bestResult) {
+        return {
+            title: bestResult.title,
+            page_size: bestResult.page_size
+        };
+    }
+    return null;
+}
+
+async function resolveWebTitleRedirect(target) {
+    if (!target) return null;
+    let url = target;
+    if (!/^https?:\/\//i.test(url)) {
+        url = `http://${url}`;
+    }
+    try {
+        return await fetchPageWithRedirectResolution(url);
+    } catch {
+        return null;
+    }
+}
+
+async function getWebServerTitle(ip) {
+    try {
+        const page = await fetchPageWithRedirectResolution(`http://${ip}`);
+        if (page && (page.title || page.page_size !== null)) {
+            return page;
+        }
+    } catch { }
+
+    try {
+        const httpsPage = await fetchPageWithRedirectResolution(`https://${ip}`);
+        return httpsPage || null;
+    } catch {
+        return null;
+    }
 }
 
 
@@ -573,6 +752,24 @@ async function saveScanCache(
 ) {
     if (!ip_range || !open_ip || !open_ssh || !open_ftp || !open_rtsp) {
         return;
+    }
+
+    if (Array.isArray(open_ip)) {
+        await Promise.all(
+            open_ip.map(async (result) => {
+                if (result && result.title && isRedirectTitle(result.title)) {
+                    try {
+                        const resolved = await resolveWebTitleRedirect(result.host);
+                        if (resolved && resolved.title && !isRedirectTitle(resolved.title)) {
+                            result.title = resolved.title;
+                            if (resolved.page_size !== null && resolved.page_size !== undefined) {
+                                result.page_size = resolved.page_size;
+                            }
+                        }
+                    } catch { }
+                }
+            })
+        );
     }
 
     const observations = [];
