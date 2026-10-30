@@ -1159,6 +1159,10 @@ app.get('/scan-queue', (req, res) => {
     res.render('scan-queue.ejs');
 });
 
+app.get('/redirects', (req, res) => {
+    res.render('redirects.ejs');
+});
+
 app.options('/api/search', (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -1293,6 +1297,212 @@ app.post('/api/scan-queue', async (req, res) => {
             }
             connection.release();
         }
+    }
+});
+
+app.get('/api/redirects', async (req, res) => {
+    try {
+        const parseInteger = (value, fallback) => {
+            if (value === undefined) return fallback;
+            if (typeof value !== 'string' || !/^\d+$/.test(value)) return null;
+            const parsed = Number(value);
+            return Number.isSafeInteger(parsed) ? parsed : null;
+        };
+        const requestedPage = parseInteger(req.query.page, 1);
+        const pageSize = parseInteger(req.query.limit, 50);
+        if (!requestedPage || requestedPage > 10000) {
+            return res.status(400).json({ error: 'The page parameter must be between 1 and 10000.' });
+        }
+        if (!pageSize || pageSize > 500) {
+            return res.status(400).json({ error: 'The limit parameter must be between 1 and 500.' });
+        }
+
+        const category = typeof req.query.category === 'string' ? req.query.category.trim().toLowerCase() : 'all';
+        const search = typeof req.query.q === 'string' ? req.query.q.trim() : '';
+
+        const conditions = ["service = 'web'", "title IS NOT NULL", "TRIM(title) <> ''"];
+        const params = [];
+
+        if (category === 'just_a_moment') {
+            conditions.push("(LOWER(title) LIKE '%just a moment%' OR LOWER(title) LIKE '%attention required%')");
+        } else if (category === 'redirecting') {
+            conditions.push("(LOWER(title) LIKE '%redirecting%' OR LOWER(title) LIKE '%redirect%')");
+        } else if (category === 'moved') {
+            conditions.push("(LOWER(title) LIKE '%moved%' OR LOWER(title) LIKE '%found%')");
+        } else if (category === 'wait') {
+            conditions.push("(LOWER(title) LIKE '%please wait%' OR LOWER(title) LIKE '%loading%')");
+        } else {
+            // all redirect types
+            conditions.push(`(
+                LOWER(title) LIKE '%just a moment%'
+                OR LOWER(title) LIKE '%redirecting%'
+                OR LOWER(title) LIKE '%redirect%'
+                OR LOWER(title) LIKE '%301 moved%'
+                OR LOWER(title) LIKE '%302 found%'
+                OR LOWER(title) LIKE '%302 moved%'
+                OR LOWER(title) LIKE '%307 temporary%'
+                OR LOWER(title) LIKE '%308 permanent%'
+                OR LOWER(title) LIKE '%document moved%'
+                OR LOWER(title) LIKE '%object moved%'
+                OR LOWER(title) LIKE '%moved temporarily%'
+                OR LOWER(title) LIKE '%moved permanently%'
+                OR LOWER(title) LIKE '%please wait%'
+                OR LOWER(title) LIKE '%loading%'
+                OR LOWER(title) LIKE '%one moment, please%'
+                OR LOWER(title) LIKE '%attention required%'
+            )`);
+        }
+
+        if (search) {
+            const pattern = `%${search}%`;
+            conditions.push('(host LIKE ? OR ip_address LIKE ? OR ip_range LIKE ? OR title LIKE ?)');
+            params.push(pattern, pattern, pattern, pattern);
+        }
+
+        const where = `WHERE ${conditions.join(' AND ')}`;
+        const [[countRow]] = await db.execute(
+            `SELECT COUNT(*) AS total FROM scan_search_index ${where}`,
+            params
+        );
+        const total = Number(countRow.total);
+        const totalPages = Math.ceil(total / pageSize) || 1;
+        const page = Math.min(requestedPage, totalPages);
+        const offset = Math.max(0, (page - 1) * pageSize);
+
+        const [rows] = await db.execute(`
+            SELECT id, ip_range, host, ip_address, service, port, title, page_size, scanned_at
+            FROM scan_search_index
+            ${where}
+            ORDER BY scanned_at DESC, id DESC
+            LIMIT ? OFFSET ?
+        `, [...params, pageSize, offset]);
+
+        res.json({
+            page,
+            limit: pageSize,
+            total,
+            totalPages,
+            items: rows.map(r => ({
+                id: Number(r.id),
+                ip_range: r.ip_range,
+                host: r.host,
+                ip_address: r.ip_address,
+                title: r.title,
+                page_size: r.page_size === null ? null : Number(r.page_size),
+                scanned_at: new Date(r.scanned_at).toISOString()
+            }))
+        });
+    } catch (error) {
+        console.error('Could not list redirect entries:', error);
+        res.status(500).json({ error: 'Could not load redirect list.' });
+    }
+});
+
+app.post('/api/redirects/rescan', async (req, res) => {
+    const id = req.body?.id;
+    let host = typeof req.body?.host === 'string' ? req.body.host.trim() : '';
+    let ipRange = typeof req.body?.ip_range === 'string' ? req.body.ip_range.trim() : '';
+
+    if (!id && !host) {
+        return res.status(400).json({ error: 'Either id or host is required.' });
+    }
+
+    try {
+        let currentTitle = null;
+        let rowId = id;
+
+        if (id) {
+            const [rows] = await db.execute('SELECT id, host, ip_range, title, page_size FROM scan_search_index WHERE id = ?', [id]);
+            if (rows.length > 0) {
+                currentTitle = rows[0].title;
+                if (!host) host = rows[0].host;
+                if (!ipRange) ipRange = rows[0].ip_range;
+            }
+        } else if (host) {
+            const [rows] = await db.execute('SELECT id, host, ip_range, title, page_size FROM scan_search_index WHERE host = ? AND service = "web" LIMIT 1', [host]);
+            if (rows.length > 0) {
+                rowId = rows[0].id;
+                currentTitle = rows[0].title;
+                if (!ipRange) ipRange = rows[0].ip_range;
+            }
+        }
+
+        const resolved = await resolveWebTitleRedirect(host);
+        if (!resolved) {
+            return res.json({
+                success: false,
+                id: rowId,
+                host,
+                error: 'Could not resolve destination title'
+            });
+        }
+
+        const newTitle = resolved.title
+            ? [...resolved.title].slice(0, MAX_SEARCH_TITLE_LENGTH).join('')
+            : null;
+        const newPageSize = resolved.page_size !== null && Number.isSafeInteger(Number(resolved.page_size))
+            ? Number(resolved.page_size)
+            : null;
+
+        // 1. Update scan_search_index
+        if (rowId) {
+            await db.execute(`
+                UPDATE scan_search_index
+                SET title = ?, page_size = ?, scanned_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            `, [newTitle, newPageSize, rowId]);
+        } else {
+            await db.execute(`
+                UPDATE scan_search_index
+                SET title = ?, page_size = ?, scanned_at = CURRENT_TIMESTAMP
+                WHERE host = ? AND service = 'web'
+            `, [newTitle, newPageSize, host]);
+        }
+
+        // 2. Update scan_cache (JSON open_ip)
+        if (ipRange) {
+            try {
+                const [cacheRows] = await db.execute('SELECT open_ip FROM scan_cache WHERE ip_range = ?', [ipRange]);
+                if (cacheRows.length > 0 && cacheRows[0].open_ip) {
+                    let openIp = typeof cacheRows[0].open_ip === 'string'
+                        ? JSON.parse(cacheRows[0].open_ip)
+                        : cacheRows[0].open_ip;
+                    if (Array.isArray(openIp)) {
+                        let cacheChanged = false;
+                        openIp = openIp.map(item => {
+                            if (item && item.host === host) {
+                                cacheChanged = true;
+                                return { ...item, title: newTitle, page_size: newPageSize };
+                            }
+                            return item;
+                        });
+                        if (cacheChanged) {
+                            await db.execute(
+                                'UPDATE scan_cache SET open_ip = ?, scanned_at = CURRENT_TIMESTAMP WHERE ip_range = ?',
+                                [JSON.stringify(openIp), ipRange]
+                            );
+                        }
+                    }
+                }
+            } catch (cacheErr) {
+                console.error('Error updating scan_cache for redirect rescan:', cacheErr);
+            }
+        }
+
+        const isStill = isRedirectTitle(newTitle);
+        res.json({
+            success: true,
+            id: rowId,
+            host,
+            oldTitle: currentTitle,
+            newTitle,
+            pageSize: newPageSize,
+            isStillRedirect: isStill,
+            changed: currentTitle !== newTitle
+        });
+    } catch (err) {
+        console.error('Error in rescan endpoint:', err);
+        res.status(500).json({ error: 'Internal error during rescan: ' + err.message });
     }
 });
 

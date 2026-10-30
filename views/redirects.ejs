@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title data-en-text="Fix Redirect Titles | The Watcher : Cyberspace Search Engine" data-th-text="ปรับปรุง Title ที่ติด Redirect | The Watcher : Cyberspace Search Engine">Fix Redirect Titles | The Watcher</title>
+    <meta name="description" content="Resolve real web titles for servers with placeholder or redirect titles like 'Just a moment...' or 'Redirecting...'." data-en-content="Resolve real web titles for servers with placeholder or redirect titles like 'Just a moment...' or 'Redirecting...'." data-th-content="สแกนและดึง Title หน้าจริงสำหรับเว็บที่ได้ผลลัพธ์เป็นหน้า redirect เช่น 'Just a moment...' หรือ 'Redirecting...'">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="redirects-page">
+    <%- include('components/navigator') %>
+    <main class="shell redirects-shell">
+        <header class="search-heading">
+            <p class="eyebrow" data-en-text="Title resolver" data-th-text="ระบบแก้ไข Title เว็บ">Title resolver</p>
+            <h1 data-en-text="Fix Redirect Titles" data-th-text="ปรับปรุง Title ที่ติด Redirect">Fix Redirect Titles</h1>
+            <p data-en-text="Find web servers with placeholder redirect titles (such as 'Just a moment...', 'Redirecting...', '301 Moved') and rescan them using the new redirect-following engine to retrieve their real page titles." data-th-text="ค้นหาเว็บเซิร์ฟเวอร์ที่ได้ Title เป็นหน้าพักหรือการ Redirect (เช่น 'Just a moment...', 'Redirecting...', '301 Moved') และกดสแกนใหม่ด้วยระบบใหม่ที่ตามไปเอา Title หน้าปลายทางจริงมาอัปเดตลงฐานข้อมูล">Find web servers with placeholder redirect titles and rescan them using the new redirect-following engine.</p>
+        </header>
+
+        <section class="summary-metrics redirects-metrics" aria-label="Redirect stats">
+            <article class="summary-metric">
+                <span data-en-text="Total Redirects" data-th-text="รายการทั้งหมด">Total Redirects</span>
+                <strong id="stat-total">—</strong>
+            </article>
+            <article class="summary-metric">
+                <span data-en-text="Resolved in session" data-th-text="แก้ไขสำเร็จแล้วในรอบนี้">Resolved in session</span>
+                <strong id="stat-resolved" style="color: var(--lime);">0</strong>
+            </article>
+            <article class="summary-metric">
+                <span data-en-text="Still Redirect / Unchanged" data-th-text="ยังคงเป็น Redirect">Still Redirect / Unchanged</span>
+                <strong id="stat-unchanged">0</strong>
+            </article>
+            <article class="summary-metric">
+                <span data-en-text="Errors" data-th-text="เกิดข้อผิดพลาด">Errors</span>
+                <strong id="stat-errors" style="color: #ff6b6b;">0</strong>
+            </article>
+        </section>
+
+        <section class="queue-panel redirects-panel" aria-labelledby="redirects-list-title">
+            <div class="redirects-controls-bar">
+                <div class="redirects-search-box">
+                    <input type="text" id="redirects-search" placeholder="Filter by host, IP, or title..." data-en-placeholder="Filter by host, IP, or title..." data-th-placeholder="กรองตาม Host, IP หรือ Title..." autocomplete="off">
+                </div>
+                <div class="redirects-filter-box">
+                    <select id="redirects-category-filter">
+                        <option value="all" data-en-text="All Redirect Types" data-th-text="ประเภท Redirect ทั้งหมด">All Redirect Types</option>
+                        <option value="just_a_moment" data-en-text="Just a moment..." data-th-text="Just a moment...">Just a moment...</option>
+                        <option value="redirecting" data-en-text="Redirecting..." data-th-text="Redirecting...">Redirecting...</option>
+                        <option value="moved" data-en-text="Moved / Found" data-th-text="Moved / Found">Moved / Found</option>
+                        <option value="wait" data-en-text="Please wait / Loading" data-th-text="Please wait / Loading">Please wait / Loading</option>
+                    </select>
+                </div>
+                <div class="redirects-actions-box">
+                    <button id="btn-refresh" type="button" class="btn-secondary" data-en-text="Refresh" data-th-text="รีเฟรช">Refresh</button>
+                    <button id="btn-rescan-page" type="button" class="btn-primary" data-en-text="Rescan Visible (Page)" data-th-text="สแกนหน้านี้ทั้งหมด">Rescan Visible (Page)</button>
+                    <button id="btn-rescan-all" type="button" class="btn-primary" style="background: var(--lime); color: var(--button-ink);" data-en-text="Rescan All Matches" data-th-text="สแกนทั้งหมดที่พบ">Rescan All Matches</button>
+                    <button id="btn-stop" type="button" class="btn-danger" style="display: none;" data-en-text="Pause / Stop" data-th-text="หยุดชั่วคราว">Pause / Stop</button>
+                </div>
+            </div>
+
+            <!-- Progress bar during active scanning -->
+            <div id="redirects-progress-container" class="redirects-progress-container" style="display: none;">
+                <div class="redirects-progress-header">
+                    <span id="redirects-progress-label" data-en-text="Rescanning hosts..." data-th-text="กำลังสแกนและดึง Title...">Rescanning hosts...</span>
+                    <span id="redirects-progress-count">0 / 0</span>
+                </div>
+                <div class="redirects-progress-track">
+                    <div id="redirects-progress-bar" class="redirects-progress-fill" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="table-responsive" style="overflow-x: auto; margin-top: 18px;">
+                <table class="table redirects-table" id="redirects-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 28%;" data-en-text="Host / IP" data-th-text="Host / IP">Host / IP</th>
+                            <th style="width: 14%;" data-en-text="Subnet Range" data-th-text="ช่วง Subnet">Subnet Range</th>
+                            <th style="width: 25%;" data-en-text="Current Title" data-th-text="Title ปัจจุบัน">Current Title</th>
+                            <th style="width: 23%;" data-en-text="Resolved Title" data-th-text="Title ใหม่ที่ได้">Resolved Title</th>
+                            <th style="width: 10%; text-align: right;" data-en-text="Action" data-th-text="ดำเนินการ">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="redirects-table-body">
+                        <tr>
+                            <td colspan="5" class="table-empty" data-en-text="Loading redirect list..." data-th-text="กำลังโหลดรายการ Redirect...">Loading redirect list...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="redirects-pagination" id="redirects-pagination">
+                <span id="redirects-page-info" class="page-info"></span>
+                <div class="pagination-buttons">
+                    <button id="btn-prev-page" class="btn-secondary btn-sm" disabled data-en-text="Previous" data-th-text="ย้อนกลับ">Previous</button>
+                    <button id="btn-next-page" class="btn-secondary btn-sm" disabled data-en-text="Next" data-th-text="ถัดไป">Next</button>
+                </div>
+            </div>
+        </section>
+    </main>
+    <script src="/js/redirects.js"></script>
+</body>
+
+</html>
+
