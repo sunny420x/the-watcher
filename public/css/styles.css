@@ -2420,3 +2420,81 @@ button:disabled {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Search Operators Hint & Documentation Page Styles */
+.search-operators-hint {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+    font-family: "DM Mono", monospace;
+    color: var(--muted);
+}
+
+.search-operators-hint .hint-pill {
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--ink);
+    text-decoration: none;
+    background: var(--surface-raised);
+    transition: all .15s ease;
+}
+
+.search-operators-hint .hint-pill:hover {
+    border-color: var(--lime);
+    color: var(--lime);
+}
+
+.search-operators-hint .hint-docs-link {
+    color: var(--lime);
+    text-decoration: underline;
+    font-weight: 500;
+}
+
+.docs-shell {
+    max-width: 1100px;
+}
+
+.docs-section {
+    margin-top: 24px;
+}
+
+.docs-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.docs-table th,
+.docs-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(205, 234, 201, .07);
+    font: 12px "DM Mono", monospace;
+    text-align: left;
+}
+
+.docs-table tr:hover td {
+    background: rgba(255, 255, 255, .02);
+}
+
+.docs-example-link {
+    color: var(--lime);
+    text-decoration: none;
+}
+
+.docs-example-link:hover {
+    text-decoration: underline;
+}
+
+.docs-code-block {
+    padding: 14px 18px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-raised);
+    color: var(--lime);
+    font: 12px "DM Mono", monospace;
+    overflow-x: auto;
+    margin-top: 12px;
+}

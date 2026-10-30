@@ -7,7 +7,7 @@
 ## 1. Project Overview & Tech Stack
 
 * **ชื่อโปรเจกต์:** The Watcher (Cyberspace Search Engine)
-* **วัตถุประสงค์:** สำรวจและทำแผนที่เครือข่าย (Subnet /24 Scanner) สำหรับค้นหาเปิดพอร์ตและบริการ Web (80), SSH (22), FTP (21), RTSP (554) พร้อมสกัด Page Title, วิเคราะห์ประเภทเว็บ, ทำดัชนีสำหรับค้นหา และมีระบบแก้ปัญหา Redirect Titles
+* **วัตถุประสงค์:** สำรวจและทำแผนที่เครือข่าย (Subnet /24 Scanner) สำหรับค้นหาเปิดพอร์ตและบริการ Web (80, 443, 8080, 8443), SSH (22), FTP (21), RTSP (554), MySQL (3306) พร้อมสกัด Page Title, วิเคราะห์ประเภทเว็บ, ทำดัชนีสำหรับค้นหาด้วย Advanced Search Operators, และมีระบบแก้ปัญหา Redirect Titles
 * **Runtime:** Node.js (CommonJS `require`)
 * **Framework:** Express 5.x
 * **Database:** MySQL (MariaDB) ผ่าน `mysql2/promise` (Connection Pool)
@@ -31,6 +31,7 @@ the_watcher_network_scanner/
 │   ├── summary.ejs              # หน้ารวมสถิติการสแกน (Summary Dashboard)
 │   ├── scan-queue.ejs           # หน้าจัดการและติดตามคิวสแกน Subnet เบื้องหลัง
 │   ├── redirects.ejs            # หน้าจัดการ & สแกนใหม่เว็บที่ติด Redirect Titles
+│   ├── docs.ejs                 # หน้าคู่มือไวยากรณ์การค้นหาขั้นสูงและพอร์ตที่รองรับ
 │   ├── api.ejs                  # หน้าเอกสาร API สำหรับผู้ใช้ภายนอก
 │   ├── error.ejs                # หน้าแสดงข้อผิดพลาด (403/404/500)
 │   └── components/
@@ -148,8 +149,9 @@ the_watcher_network_scanner/
 * `GET /search`: หน้ารายการค้นหาและผลลัพธ์แบบละเอียด
 * `GET /take-a-walk`: หน้าสุ่มหรือแนะนำการสำรวจ Subnet จาก IP ของผู้ใช้
 * `GET /summary`: หน้า Dashboard สรุปยอดรวม IP และสถิติต่างๆ
-* `GET /scan-queue`: หน้าติดตามและเพิ่ม Subnet เข้าคิวสแกนเบื้องหลัง
-* `GET /redirects`: **หน้าใหม่** จัดการรายการเว็บที่ Title ติด Redirect พร้อมปุ่มสแกนใหม่
+* `GET /scan-queue`: หน้าติดตามและเพิ่ม Subnet เข้าคิวสแกนเบื้องหลัง (พร้อมปุ่ม Rescan Subnet ในประวัติ)
+* `GET /redirects`: หน้าจัดการรายการเว็บที่ Title ติด Redirect พร้อมปุ่มสแกนใหม่
+* `GET /docs`: **หน้าใหม่** คู่มือการค้นหาขั้นสูง (Search Operators), ตารางพอร์ตที่รองรับ, และตัวอย่างคำค้น
 * `GET /preview?url=...`: Proxy แสดงหน้าเว็บผ่าน iframe สำหรับโฮสต์ที่มีในแคช
 
 ### 5.2 JSON APIs

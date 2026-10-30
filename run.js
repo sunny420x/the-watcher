@@ -138,20 +138,23 @@ function scanPort(host, port) {
 }
 
 
-async function findWebServer(ip) {
+async function findWebServer(ip, port = 80, defaultProto = 'http') {
     const host = ip;
-    const port = 80;
-
     const isOpen = await scanPort(host, port);
 
     if (isOpen) {
-        const page = await getWebServerTitle(host);
-        if (page && page.title) {
-            return { host: `http://${host}`, title: page.title, page_size: page.page_size }
-        } else {
-            return 0;
-        }
+        const page = await getWebServerTitle(host, port, defaultProto);
+        const actualProto = (page && page.protocol) ? page.protocol : defaultProto;
+        const isStandard = (port === 80 && actualProto === 'http') || (port === 443 && actualProto === 'https');
+        const hostUrl = `${actualProto}://${host}${isStandard ? '' : ':' + port}`;
+        return {
+            host: hostUrl,
+            title: page && page.title ? page.title : null,
+            page_size: page ? page.page_size : null,
+            port
+        };
     }
+    return 0;
 }
 
 const BROWSER_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -350,31 +353,37 @@ async function resolveWebTitleRedirect(target) {
     }
 }
 
-async function getWebServerTitle(ip) {
+async function getWebServerTitle(ip, port = 80, defaultProto = 'http') {
+    const isStandard = (port === 80 && defaultProto === 'http') || (port === 443 && defaultProto === 'https');
+    const portSuffix = isStandard ? '' : `:${port}`;
+    const primaryUrl = `${defaultProto}://${ip}${portSuffix}`;
+    const fallbackProto = defaultProto === 'https' ? 'http' : 'https';
+    const fallbackUrl = `${fallbackProto}://${ip}${portSuffix}`;
+
     try {
-        const page = await fetchPageWithRedirectResolution(`http://${ip}`);
+        const page = await fetchPageWithRedirectResolution(primaryUrl);
         if (page && (page.title || page.page_size !== null)) {
-            return page;
+            return { ...page, protocol: defaultProto };
         }
     } catch { }
 
     try {
-        const httpsPage = await fetchPageWithRedirectResolution(`https://${ip}`);
-        return httpsPage || null;
-    } catch {
-        return null;
-    }
-}
+        const fallbackPage = await fetchPageWithRedirectResolution(fallbackUrl);
+        if (fallbackPage && (fallbackPage.title || fallbackPage.page_size !== null)) {
+            return { ...fallbackPage, protocol: fallbackProto };
+        }
+    } catch { }
 
+    return null;
+}
 
 async function findSSH(ip) {
     const host = ip;
     const port = 22;
 
     const isOpen = await scanPort(host, port);
-
     if (isOpen) {
-        return `${host}`
+        return `${host}`;
     }
 }
 
@@ -383,9 +392,8 @@ async function findFTP(ip) {
     const port = 21;
 
     const isOpen = await scanPort(host, port);
-
     if (isOpen) {
-        return `${host}`
+        return `${host}`;
     }
 }
 
@@ -394,63 +402,83 @@ async function findRTSP(ip) {
     const port = 554;
 
     const isOpen = await scanPort(host, port);
-
     if (isOpen) {
-        return `${host}`
+        return `${host}`;
+    }
+}
+
+async function findMySQL(ip) {
+    const host = ip;
+    const port = 3306;
+
+    const isOpen = await scanPort(host, port);
+    if (isOpen) {
+        return `${host}`;
     }
 }
 
 async function scanWebServer(ip_range) {
-    const open_ip_promises = [];
-
+    const tasks = [];
     for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
-        const web_server = findWebServer(ip);
-        open_ip_promises.push(web_server);
+        tasks.push(() => findWebServer(ip, 80, 'http'));
+        tasks.push(() => findWebServer(ip, 443, 'https'));
+        tasks.push(() => findWebServer(ip, 8080, 'http'));
+        tasks.push(() => findWebServer(ip, 8443, 'https'));
     }
 
-    const results = await Promise.all(open_ip_promises);
-    const open_ip = results.filter(Boolean);
-    return open_ip;
+    const results = [];
+    const CONCURRENCY = 128;
+    let index = 0;
+    const workers = new Array(Math.min(CONCURRENCY, tasks.length)).fill(0).map(async () => {
+        while (index < tasks.length) {
+            const current = index++;
+            const res = await tasks[current]();
+            if (res) results.push(res);
+        }
+    });
+    await Promise.all(workers);
+    return results;
 }
 
 async function scanSSH(ip_range) {
     const open_ip_promises = [];
-
     for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         open_ip_promises.push(findSSH(ip));
     }
-
     const results = await Promise.all(open_ip_promises);
-    const open_ip = results.filter(Boolean);
-    return open_ip;
+    return results.filter(Boolean);
 }
 
 async function scanFTP(ip_range) {
     const open_ip_promises = [];
-
     for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         open_ip_promises.push(findFTP(ip));
     }
-
     const results = await Promise.all(open_ip_promises);
-    const open_ip = results.filter(Boolean);
-    return open_ip;
+    return results.filter(Boolean);
 }
 
 async function scanRTSP(ip_range) {
     const open_ip_promises = [];
-
     for (let i = 0; i <= 255; i++) {
         const ip = `${ip_range}.${i}`;
         open_ip_promises.push(findRTSP(ip));
     }
-
     const results = await Promise.all(open_ip_promises);
-    const open_ip = results.filter(Boolean);
-    return open_ip;
+    return results.filter(Boolean);
+}
+
+async function scanMySQL(ip_range) {
+    const open_ip_promises = [];
+    for (let i = 0; i <= 255; i++) {
+        const ip = `${ip_range}.${i}`;
+        open_ip_promises.push(findMySQL(ip));
+    }
+    const results = await Promise.all(open_ip_promises);
+    return results.filter(Boolean);
 }
 
 function withExclusiveScan(ip_range, task) {
@@ -473,14 +501,15 @@ async function performScan(ip_range) {
     const open_ssh = await scanSSH(ip_range);
     const open_ftp = await scanFTP(ip_range);
     const open_rtsp = await scanRTSP(ip_range);
+    const open_mysql = await scanMySQL(ip_range);
 
-    await saveScanCache(ip_range, open_ip, open_ssh, open_ftp, open_rtsp);
-    return { open_ip, open_ssh, open_ftp, open_rtsp };
+    await saveScanCache(ip_range, open_ip, open_ssh, open_ftp, open_rtsp, open_mysql);
+    return { open_ip, open_ssh, open_ftp, open_rtsp, open_mysql };
 }
 
 function isReusableScanCache(cached) {
     if (!cached) return false;
-    const hasFindings = ['open_ip', 'open_ssh', 'open_ftp', 'open_rtsp'].some(service =>
+    const hasFindings = ['open_ip', 'open_ssh', 'open_ftp', 'open_rtsp', 'open_mysql'].some(service =>
         Array.isArray(cached[service]) && cached[service].length > 0
     );
     return hasFindings || Boolean(cached.negative_cache_valid);
@@ -748,7 +777,8 @@ async function saveScanCache(
     open_ip,
     open_ssh,
     open_ftp,
-    open_rtsp
+    open_rtsp,
+    open_mysql = []
 ) {
     if (!ip_range || !open_ip || !open_ssh || !open_ftp || !open_rtsp) {
         return;
@@ -777,9 +807,18 @@ async function saveScanCache(
     open_ip.forEach(result => {
         if (!result || typeof result.host !== 'string') return;
         let ip_address = result.host;
+        let port = Number(result.port);
         try {
-            ip_address = new URL(result.host).hostname;
+            const parsedUrl = new URL(result.host);
+            ip_address = parsedUrl.hostname;
+            if (!Number.isInteger(port) || port <= 0) {
+                if (parsedUrl.port) port = Number(parsedUrl.port);
+                else if (parsedUrl.protocol === 'https:') port = 443;
+                else port = 80;
+            }
         } catch { }
+        if (!Number.isInteger(port) || port <= 0) port = 80;
+
         const title = typeof result.title === 'string'
             ? [...result.title].slice(0, MAX_SEARCH_TITLE_LENGTH).join('')
             : null;
@@ -788,7 +827,7 @@ async function saveScanCache(
             result.host,
             ip_address,
             'web',
-            80,
+            port,
             title || null,
             result.page_size !== null && result.page_size !== undefined
                 && Number.isSafeInteger(Number(result.page_size)) && Number(result.page_size) >= 0
@@ -800,12 +839,15 @@ async function saveScanCache(
     [
         ['ssh', 22, open_ssh],
         ['ftp', 21, open_ftp],
-        ['rtsp', 554, open_rtsp]
+        ['rtsp', 554, open_rtsp],
+        ['mysql', 3306, open_mysql]
     ].forEach(([service, port, hosts]) => {
-        hosts.forEach(host => {
-            if (typeof host !== 'string' || !host) return;
-            observations.push([ip_range, host, host, service, port, null, null]);
-        });
+        if (Array.isArray(hosts)) {
+            hosts.forEach(host => {
+                if (typeof host !== 'string' || !host) return;
+                observations.push([ip_range, host, host, service, port, null, null]);
+            });
+        }
     });
 
     const connection = await db.getConnection();
@@ -867,26 +909,106 @@ async function saveScanCache(
     }
 }
 
+function parseAdvancedSearchQuery(rawQuery) {
+    if (!rawQuery || typeof rawQuery !== 'string') {
+        return { filters: {}, freeTerms: [] };
+    }
+
+    const filters = {};
+    const freeTerms = [];
+
+    const regex = /(?:(\b[a-zA-Z_-]+):(?:"([^"]+)"|([^\s]+)))|(?:"([^"]+)"|([^\s]+))/g;
+    let match;
+
+    while ((match = regex.exec(rawQuery)) !== null) {
+        const key = match[1] ? match[1].toLowerCase() : null;
+        const val = match[2] || match[3] || match[4] || match[5];
+
+        if (!val) continue;
+
+        if (key) {
+            if (key === 'port') {
+                const p = parseInt(val, 10);
+                if (Number.isInteger(p) && p > 0 && p <= 65535) filters.port = p;
+            } else if (key === 'service') {
+                filters.service = val.toLowerCase();
+            } else if (key === 'title') {
+                filters.title = val;
+            } else if (key === 'ip' || key === 'host') {
+                filters.host = val;
+            } else if (key === 'range' || key === 'subnet') {
+                filters.ip_range = val;
+            } else if (key === 'has') {
+                if (val.toLowerCase() === 'title') filters.hasTitle = true;
+                if (val.toLowerCase() === 'notitle') filters.hasTitle = false;
+            } else {
+                freeTerms.push(`${key}:${val}`);
+            }
+        } else {
+            freeTerms.push(val);
+        }
+    }
+
+    return { filters, freeTerms };
+}
+
+function buildSearchConditions(q, explicitService) {
+    const conditions = [];
+    const params = [];
+
+    const { filters, freeTerms } = parseAdvancedSearchQuery(q);
+
+    const service = filters.service || explicitService;
+    if (service) {
+        conditions.push('service = ?');
+        params.push(service);
+    }
+
+    if (filters.port) {
+        conditions.push('port = ?');
+        params.push(filters.port);
+    }
+
+    if (filters.title) {
+        conditions.push('title LIKE ?');
+        params.push(`%${filters.title}%`);
+    }
+
+    if (filters.host) {
+        conditions.push('(host LIKE ? OR ip_address LIKE ?)');
+        params.push(`%${filters.host}%`, `%${filters.host}%`);
+    }
+
+    if (filters.ip_range) {
+        conditions.push('ip_range LIKE ?');
+        params.push(`%${filters.ip_range}%`);
+    }
+
+    if (filters.hasTitle === true) {
+        conditions.push("title IS NOT NULL AND TRIM(title) <> ''");
+    } else if (filters.hasTitle === false) {
+        conditions.push("(title IS NULL OR TRIM(title) = '')");
+    }
+
+    for (const term of freeTerms) {
+        const pattern = `%${term}%`;
+        conditions.push('(host LIKE ? OR ip_address LIKE ? OR title LIKE ? OR ip_range LIKE ?)');
+        params.push(pattern, pattern, pattern, pattern);
+    }
+
+    return { conditions, params, filters, freeTerms };
+}
+
 async function renderSearchPage(req, res) {
-    const services = ['web', 'ssh', 'ftp', 'rtsp'];
+    const services = ['web', 'ssh', 'ftp', 'rtsp', 'mysql'];
     const selectedService = services.includes(req.query.service) ? req.query.service : '';
-    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 200) : '';
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 300) : '';
     const pageSize = 50;
     let page = Number.parseInt(req.query.page, 10);
     if (!Number.isInteger(page) || page < 1) page = 1;
 
     try {
-        const conditions = [];
-        const params = [];
-        if (q) {
-            conditions.push('(host LIKE ? OR ip_address LIKE ? OR title LIKE ? OR ip_range LIKE ?)');
-            const pattern = `%${q}%`;
-            params.push(pattern, pattern, pattern, pattern);
-        }
-        if (selectedService) {
-            conditions.push('service = ?');
-            params.push(selectedService);
-        }
+        const { conditions, params } = buildSearchConditions(q, selectedService);
         let results = [];
         let total = 0;
         if (conditions.length > 0) {
@@ -1163,6 +1285,10 @@ app.get('/redirects', (req, res) => {
     res.render('redirects.ejs');
 });
 
+app.get('/docs', (req, res) => {
+    res.render('docs.ejs');
+});
+
 app.options('/api/search', (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -1174,10 +1300,10 @@ app.get('/api/search', async (req, res) => {
 
     const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
     if (!search) return res.status(400).json({ error: 'The search parameter is required.' });
-    if (search.length > 200) return res.status(400).json({ error: 'The search parameter must be 200 characters or fewer.' });
+    if (search.length > 300) return res.status(400).json({ error: 'The search parameter must be 300 characters or fewer.' });
 
-    const services = ['web', 'ssh', 'ftp', 'rtsp'];
-    const service = typeof req.query.service === 'string' ? req.query.service : '';
+    const services = ['web', 'ssh', 'ftp', 'rtsp', 'mysql'];
+    const service = typeof req.query.service === 'string' ? req.query.service.toLowerCase() : '';
     if (service && !services.includes(service)) {
         return res.status(400).json({ error: `The service parameter must be one of: ${services.join(', ')}.` });
     }
@@ -1198,12 +1324,9 @@ app.get('/api/search', async (req, res) => {
     }
 
     try {
-        const conditions = ['(host LIKE ? OR ip_address LIKE ? OR title LIKE ? OR ip_range LIKE ?)'];
-        const pattern = `%${search}%`;
-        const params = [pattern, pattern, pattern, pattern];
-        if (service) {
-            conditions.push('service = ?');
-            params.push(service);
+        const { conditions, params } = buildSearchConditions(search, service);
+        if (conditions.length === 0) {
+            conditions.push('1=1');
         }
         const where = `WHERE ${conditions.join(' AND ')}`;
         const [[countRow]] = await db.execute(
@@ -1211,8 +1334,8 @@ app.get('/api/search', async (req, res) => {
             params
         );
         const total = Number(countRow.total);
-        const totalPages = Math.ceil(total / pageSize);
-        const page = Math.min(requestedPage, Math.max(1, totalPages));
+        const totalPages = Math.ceil(total / pageSize) || 1;
+        const page = Math.min(requestedPage, totalPages);
         const [rows] = await db.execute(`
             SELECT ip_range, host, ip_address, service, port, title, page_size, scanned_at
             FROM scan_search_index

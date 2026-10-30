@@ -102,12 +102,54 @@
                 <div class="queue-history-main">
                     <span class="queue-status-badge status-${escapeHtml(job.status)}">${escapeHtml(statusLabel(job.status))}</span>
                     <strong>${escapeHtml(job.start_range)} – ${escapeHtml(job.end_range)}</strong>
-                <span>${translate('{completed} / {total} subnet(s)', '{completed} / {total} ช่วง Subnet', { completed, total })}</span>
+                    <span>${translate('{completed} / {total} subnet(s)', '{completed} / {total} ช่วง Subnet', { completed, total })}</span>
                 </div>
-                <time>${escapeHtml(formatDate(job.created_at))}</time>
+                <div class="queue-history-side" style="display: flex; align-items: center; gap: 10px;">
+                    <time>${escapeHtml(formatDate(job.created_at))}</time>
+                    <button type="button" class="btn-rescan-subnet btn-secondary btn-sm" data-start="${escapeHtml(job.start_range)}" data-end="${escapeHtml(job.end_range)}">
+                        ${escapeHtml(translate('Rescan Subnet', 'สแกนซ้ำ'))}
+                    </button>
+                </div>
                 ${error}
             </article>`;
         }).join('');
+
+        historyContainer.querySelectorAll('.btn-rescan-subnet').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const startRange = btn.getAttribute('data-start');
+                const endRange = btn.getAttribute('data-end');
+                if (!startRange || !endRange) return;
+
+                btn.disabled = true;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<span class="spinner-inline"></span> ${escapeHtml(translate('Adding...', 'กำลังเพิ่ม...'))}`;
+
+                try {
+                    const res = await fetch('/api/scan-queue', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start_range: startRange, end_range: endRange })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+
+                    message.textContent = translate(
+                        `Added subnet ${startRange} – ${endRange} to scan queue!`,
+                        `เพิ่มช่วง Subnet ${startRange} – ${endRange} เข้าคิวสแกนเรียบร้อยแล้ว!`
+                    );
+                    message.classList.remove('is-error');
+                    message.classList.add('is-busy');
+
+                    refresh();
+                } catch (err) {
+                    message.textContent = translate('Could not rescan: ' + err.message, 'ไม่สามารถสแกนซ้ำได้: ' + err.message);
+                    message.classList.add('is-error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            });
+        });
     }
 
     function updateForm(data) {

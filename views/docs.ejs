@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title data-en-text="Search Engine Documentation | The Watcher" data-th-text="คู่มือการใช้งานระบบค้นหา | The Watcher">Search Engine Documentation | The Watcher</title>
+    <meta name="description" content="Guide to advanced search operators, syntax, supported ports, and API endpoints for The Watcher Cyberspace Search Engine." data-en-content="Guide to advanced search operators, syntax, supported ports, and API endpoints for The Watcher Cyberspace Search Engine." data-th-content="คู่มือการใช้ตัวดำเนินการค้นหาขั้นสูง พอร์ตที่รองรับ และการใช้งาน API สำหรับ The Watcher">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Prompt:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/js/theme.js"></script>
+    <script src="/js/language.js"></script>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+
+<body class="docs-page">
+    <%- include('components/navigator') %>
+    <main class="shell docs-shell">
+        <header class="search-heading">
+            <p class="eyebrow" data-en-text="Documentation & Search Guide" data-th-text="คู่มือและไวยากรณ์การค้นหา">Documentation & Search Guide</p>
+            <h1 data-en-text="How to Search The Watcher" data-th-text="วิธีค้นหาบน The Watcher">How to Search The Watcher</h1>
+            <p data-en-text="Use powerful search operators to filter by port, protocol, title, subnet range, or IP address just like professional cyberspace search engines." data-th-text="ใช้ตัวดำเนินการค้นหาขั้นสูงเพื่อกรองตามพอร์ต, บริการ, Title, ช่วง Subnet หรือ IP Address เช่นเดียวกับ Cyberspace Search Engine ระดับสากล">Use powerful search operators to filter by port, protocol, title, subnet range, or IP address.</p>
+        </header>
+
+        <!-- Advanced Search Operators Section -->
+        <section class="queue-panel docs-section">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow" data-en-text="Search Syntax" data-th-text="ไวยากรณ์การค้นหา">Search Syntax</p>
+                    <h2 data-en-text="Advanced Search Operators" data-th-text="ตัวดำเนินการค้นหาขั้นสูง">Advanced Search Operators</h2>
+                </div>
+            </div>
+            <p class="queue-help"><span data-en-text="Combine multiple operators with spaces to narrow down your results. Free terms without operators will search across host, IP, title, and subnet range." data-th-text="สามารถผสมผสานหลายตัวดำเนินการด้วยการเว้นวรรค คำค้นทั่วไปที่ไม่มีตัวดำเนินการจะทำการค้นหาทั้ง Host, IP, Title และ Subnet Range">Combine multiple operators with spaces to narrow down your results.</span></p>
+
+            <div class="table-responsive" style="overflow-x: auto; margin-top: 14px;">
+                <table class="table docs-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;" data-en-text="Operator" data-th-text="ตัวดำเนินการ">Operator</th>
+                            <th style="width: 35%;" data-en-text="Description" data-th-text="คำอธิบาย">Description</th>
+                            <th style="width: 40%;" data-en-text="Example (Click to Search)" data-th-text="ตัวอย่าง (กดเพื่อค้นหา)">Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>port:&lt;number&gt;</code></td>
+                            <td data-en-text="Filter by specific port number" data-th-text="กรองตามหมายเลขพอร์ต">Filter by specific port number</td>
+                            <td><a href="/?q=port:443" class="docs-example-link"><code>port:443</code></a> <span class="text-muted">or</span> <a href="/?q=port:8080" class="docs-example-link"><code>port:8080</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><code>service:&lt;name&gt;</code></td>
+                            <td data-en-text="Filter by service type (web, ssh, ftp, rtsp, mysql)" data-th-text="กรองตามประเภทบริการ (web, ssh, ftp, rtsp, mysql)">Filter by service type</td>
+                            <td><a href="/?q=service:web" class="docs-example-link"><code>service:web</code></a> <span class="text-muted">or</span> <a href="/?q=service:mysql" class="docs-example-link"><code>service:mysql</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><code>title:"&lt;text&gt;"</code></td>
+                            <td data-en-text="Search specific text inside page titles (use quotes for multi-word)" data-th-text="ค้นหาข้อความเฉพาะใน Title หน้าเว็บ (ใส่เครื่องหมายคำพูดหากมีหลายคำ)">Search specific text inside page titles</td>
+                            <td><a href="/?q=title:%22MikroTik%22" class="docs-example-link"><code>title:"MikroTik"</code></a> <span class="text-muted">or</span> <a href="/?q=title:login" class="docs-example-link"><code>title:login</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><code>range:&lt;subnet&gt;</code> <span class="text-muted">or</span> <code>subnet:</code></td>
+                            <td data-en-text="Filter by subnet prefix (e.g. 192.168.1)" data-th-text="กรองตาม Prefix ของ Subnet (เช่น 192.168.1)">Filter by subnet prefix</td>
+                            <td><a href="/?q=range:192.168.1" class="docs-example-link"><code>range:192.168.1</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><code>ip:&lt;address&gt;</code> <span class="text-muted">or</span> <code>host:</code></td>
+                            <td data-en-text="Search specific host IP address" data-th-text="ค้นหา IP address เฉพาะเจาะจง">Search specific host IP address</td>
+                            <td><a href="/?q=ip:192.168.1.1" class="docs-example-link"><code>ip:192.168.1.1</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><code>has:title</code> / <code>has:notitle</code></td>
+                            <td data-en-text="Filter entries that have or do not have a web title" data-th-text="กรองเฉพาะเว็บที่มี Title หรือไม่มี Title">Filter entries with or without title</td>
+                            <td><a href="/?q=service:web+has:title" class="docs-example-link"><code>service:web has:title</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong data-en-text="Combined Queries" data-th-text="การค้นหาแบบผสมผสาน">Combined Queries</strong></td>
+                            <td data-en-text="Combine multiple operators with keywords" data-th-text="ผสมหลายตัวดำเนินการร่วมกับคำค้นทั่วไป">Combine multiple operators</td>
+                            <td><a href="/?q=port:443+title:admin" class="docs-example-link"><code>port:443 title:admin</code></a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Supported Ports Coverage Section -->
+        <section class="queue-panel docs-section">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow" data-en-text="Network Coverage" data-th-text="บริการที่ระบบตรวจจับ">Network Coverage</p>
+                    <h2 data-en-text="Supported Services & Ports" data-th-text="บริการและพอร์ตที่รองรับ">Supported Services & Ports</h2>
+                </div>
+            </div>
+            <p class="queue-help"><span data-en-text="The scanner monitors popular web, management, streaming, and database ports. If older records do not have a particular port, it displays as '-'." data-th-text="ระบบสแกนเนอร์จะตรวจจับพอร์ตเว็บ, พอร์ตจัดการ, สตรีมมิ่ง และฐานข้อมูลยอดนิยม หากข้อมูลเก่าไม่มีพอร์ตดังกล่าวจะแสดงผลเป็น '-'">The scanner monitors popular web, management, streaming, and database ports.</span></p>
+
+            <div class="table-responsive" style="overflow-x: auto; margin-top: 14px;">
+                <table class="table docs-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;" data-en-text="Port" data-th-text="พอร์ต">Port</th>
+                            <th style="width: 20%;" data-en-text="Service" data-th-text="บริการ">Service</th>
+                            <th style="width: 35%;" data-en-text="Protocol / Behavior" data-th-text="โปรโตคอล / การทำงาน">Protocol</th>
+                            <th style="width: 30%;" data-en-text="Quick Search" data-th-text="ค้นหาทันที">Quick Search</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>80</strong></td>
+                            <td><span class="service-chip service-web">web</span></td>
+                            <td data-en-text="HTTP Web Server (HTML Title, Redirect Following, Page Size)" data-th-text="เว็บ HTTP (สกัด Title, ตาม Redirect, ขนาดหน้าเว็บ)">HTTP Web Server</td>
+                            <td><a href="/?q=port:80" class="docs-example-link"><code>port:80</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>443</strong></td>
+                            <td><span class="service-chip service-web">web (HTTPS)</span></td>
+                            <td data-en-text="HTTPS Secure Web Server (SSL/TLS, Title & Page Size)" data-th-text="เว็บปลอดภัย HTTPS (SSL/TLS, Title และขนาดหน้าเว็บ)">HTTPS Secure Web</td>
+                            <td><a href="/?q=port:443" class="docs-example-link"><code>port:443</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>8080</strong></td>
+                            <td><span class="service-chip service-web">web-alt</span></td>
+                            <td data-en-text="HTTP Alternate Web Server (Proxies, Web Dashboards, Dev Servers)" data-th-text="เว็บพอร์ตสำรอง HTTP (Proxy, หน้าจัดการเราเตอร์, เซิร์ฟเวอร์ทดสอบ)">HTTP Alternate Web</td>
+                            <td><a href="/?q=port:8080" class="docs-example-link"><code>port:8080</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>8443</strong></td>
+                            <td><span class="service-chip service-web">https-alt</span></td>
+                            <td data-en-text="HTTPS Alternate Secure Web (Management Consoles, Routers)" data-th-text="เว็บปลอดภัยพอร์ตสำรอง HTTPS (หน้าจัดการคอนโซล)">HTTPS Alternate Web</td>
+                            <td><a href="/?q=port:8443" class="docs-example-link"><code>port:8443</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>22</strong></td>
+                            <td><span class="service-chip service-ssh">ssh</span></td>
+                            <td data-en-text="Secure Shell Remote Administration" data-th-text="การจัดการทางไกลผ่าน Secure Shell (SSH)">Secure Shell</td>
+                            <td><a href="/?q=port:22" class="docs-example-link"><code>port:22</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>21</strong></td>
+                            <td><span class="service-chip service-ftp">ftp</span></td>
+                            <td data-en-text="File Transfer Protocol" data-th-text="บริการถ่ายโอนไฟล์ File Transfer Protocol (FTP)">File Transfer Protocol</td>
+                            <td><a href="/?q=port:21" class="docs-example-link"><code>port:21</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>554</strong></td>
+                            <td><span class="service-chip service-rtsp">rtsp</span></td>
+                            <td data-en-text="Real Time Streaming Protocol (IP Cameras, CCTV, Media Streams)" data-th-text="โปรโตคอลสตรีมมิ่งภาพวิดีโอ (กล้องวงจรปิด CCTV, IP Camera)">RTSP Streaming Protocol</td>
+                            <td><a href="/?q=port:554" class="docs-example-link"><code>port:554</code></a></td>
+                        </tr>
+                        <tr>
+                            <td><strong>3306</strong></td>
+                            <td><span class="service-chip service-mysql" style="border-color: rgba(118, 215, 209, .4); color: var(--cyan);">mysql</span></td>
+                            <td data-en-text="MySQL / MariaDB Database Server" data-th-text="เซิร์ฟเวอร์ฐานข้อมูล MySQL / MariaDB">MySQL / MariaDB Database</td>
+                            <td><a href="/?q=port:3306" class="docs-example-link"><code>port:3306</code></a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- REST API Guide Section -->
+        <section class="queue-panel docs-section">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow" data-en-text="Developer Integration" data-th-text="การเชื่อมต่อสำหรับนักพัฒนา">Developer Integration</p>
+                    <h2 data-en-text="Public Search API" data-th-text="REST API การค้นหา">Public Search API</h2>
+                </div>
+            </div>
+            <p class="queue-help"><span data-en-text="The Public Search API supports the same query syntax. Returns JSON format." data-th-text="API ค้นหารองรับไวยากรณ์เดียวกัน คืนค่าผลลัพธ์เป็น JSON">The Public Search API supports the same query syntax.</span></p>
+
+            <pre class="docs-code-block"><code>GET /api/search?search=port:443+title:admin&amp;limit=25&amp;page=1
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "query": { "search": "port:443 title:admin", "page": 1, "limit": 25 },
+  "total": 42,
+  "totalPages": 2,
+  "results": [
+    {
+      "ip_range": "192.168.1",
+      "host": "https://192.168.1.1",
+      "ip_address": "192.168.1.1",
+      "service": "web",
+      "port": 443,
+      "title": "Router Admin Console",
+      "page_size": 2400,
+      "scanned_at": "2026-10-30T15:30:00.000Z"
+    }
+  ]
+}</code></pre>
+        </section>
+    </main>
+</body>
+
+</html>
+

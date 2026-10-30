@@ -61,6 +61,16 @@
             </div>
         </form>
 
+        <div class="search-operators-hint">
+            <span data-en-text="Try advanced operators:" data-th-text="ลองค้นหาด้วย:">Try advanced operators:</span>
+            <a href="/?q=port:443" class="hint-pill">port:443</a>
+            <a href="/?q=title:admin" class="hint-pill">title:admin</a>
+            <a href="/?q=service:mysql" class="hint-pill">service:mysql</a>
+            <a href="/?q=has:title" class="hint-pill">has:title</a>
+            <span>·</span>
+            <a href="/docs" class="hint-docs-link" data-en-text="Search Syntax Guide →" data-th-text="คู่มือค้นหาขั้นสูง →">Search Syntax Guide →</a>
+        </div>
+
         <section id="index-results" class="index-results" aria-live="polite" aria-busy="false">
             <%- include('components/search-results') %>
         </section>
