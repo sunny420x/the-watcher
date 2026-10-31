@@ -1278,6 +1278,70 @@ html[data-theme="light"] .queue-pulse {
     overflow-wrap: anywhere;
 }
 
+.queue-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.queue-filter-input {
+    flex: 1;
+    max-width: 380px;
+    height: 38px;
+    padding: 0 12px;
+    background: var(--surface-raised);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--ink);
+    font: 12px "DM Mono", monospace;
+    outline: none;
+    transition: border-color .15s ease;
+}
+
+.queue-filter-input:focus {
+    border-color: var(--lime);
+}
+
+.queue-subnets-container {
+    max-height: 520px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--surface);
+}
+
+.subnet-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font: 10px "DM Mono", monospace;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    background: var(--surface-raised);
+}
+
+.subnet-tag.tag-web {
+    color: var(--lime);
+    border-color: rgba(198, 243, 107, .25);
+}
+
+.subnet-tag.tag-ssh {
+    color: var(--cyan);
+    border-color: rgba(118, 215, 209, .25);
+}
+
+.subnet-tag.tag-ftp {
+    color: #f7b955;
+    border-color: rgba(247, 185, 85, .25);
+}
+
+.subnet-tag.tag-rtsp {
+    color: #e599f7;
+    border-color: rgba(229, 153, 247, .25);
+}
+
 .summary-shell {
     max-width: 1240px;
 }

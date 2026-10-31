@@ -4,12 +4,17 @@
     const message = document.getElementById('queue-message');
     const activeContainer = document.getElementById('queue-active');
     const historyContainer = document.getElementById('queue-history');
+    const subnetsContainer = document.getElementById('queue-subnets');
+    const subnetsCount = document.getElementById('queue-subnets-count');
+    const filterSubnetsInput = document.getElementById('filter-subnets-input');
     const refreshStatus = document.getElementById('queue-refresh-status');
     let requestPending = false;
     let refreshTimer = null;
     let refreshInProgress = false;
     let refreshQueued = false;
     let activeWork = false;
+    let cachedSubnets = [];
+    let currentSubnetFilter = '';
     const ACTIVE_REFRESH_INTERVAL_MS = 3000;
     const IDLE_REFRESH_INTERVAL_MS = 10000;
     const ERROR_REFRESH_INTERVAL_MS = 5000;
@@ -89,25 +94,118 @@
                 : translate('Preparing to start', 'กำลังเตรียมเริ่มสแกน')}</span></div>`;
     }
 
+    function renderSubnets(subnets) {
+        if (!subnetsContainer) return;
+        const filtered = subnets.filter(s => !currentSubnetFilter || s.ip_range.toLowerCase().includes(currentSubnetFilter));
+
+        if (subnetsCount) {
+            subnetsCount.textContent = translate('{count} SUBNETS', '{count} ช่วง', { count: filtered.length });
+        }
+
+        if (!subnets.length) {
+            subnetsContainer.innerHTML = `<div class="queue-empty-state">${translate('No scanned subnets yet.', 'ยังไม่มีประวัติ Subnet ที่สแกน')}</div>`;
+            return;
+        }
+
+        if (!filtered.length) {
+            subnetsContainer.innerHTML = `<div class="queue-empty-state">${translate('No subnets match the search filter.', 'ไม่พบ Subnet ที่ตรงกับคำค้นหา')}</div>`;
+            return;
+        }
+
+        subnetsContainer.innerHTML = filtered.map(subnet => {
+            return `<article class="queue-history-row">
+                <div class="queue-history-main">
+                    <strong>${escapeHtml(subnet.ip_range)}.0/24</strong>
+                    <span class="subnet-tag tag-web">Web: ${subnet.web_count}</span>
+                    ${subnet.ssh_count > 0 ? `<span class="subnet-tag tag-ssh">SSH: ${subnet.ssh_count}</span>` : ''}
+                    ${subnet.ftp_count > 0 ? `<span class="subnet-tag tag-ftp">FTP: ${subnet.ftp_count}</span>` : ''}
+                    ${subnet.rtsp_count > 0 ? `<span class="subnet-tag tag-rtsp">RTSP: ${subnet.rtsp_count}</span>` : ''}
+                    <span>${translate('{total} finding(s)', 'พบ {total} รายการ', { total: subnet.total_findings })}</span>
+                </div>
+                <div class="queue-history-side" style="display: flex; align-items: center; gap: 10px;">
+                    <time>${escapeHtml(formatDate(subnet.scanned_at))}</time>
+                    <button type="button" class="btn-rescan-single-subnet btn-secondary btn-sm" data-subnet="${escapeHtml(subnet.ip_range)}">
+                        ${escapeHtml(translate('Rescan Subnet', 'สแกนซ้ำ'))}
+                    </button>
+                </div>
+            </article>`;
+        }).join('');
+
+        subnetsContainer.querySelectorAll('.btn-rescan-single-subnet').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const subnet = btn.getAttribute('data-subnet');
+                if (!subnet) return;
+
+                btn.disabled = true;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<span class="spinner-inline"></span> ${escapeHtml(translate('Adding...', 'กำลังเพิ่ม...'))}`;
+
+                try {
+                    const res = await fetch('/api/scan-queue', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ start_range: subnet, end_range: subnet })
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
+
+                    message.textContent = translate(
+                        `Added subnet ${subnet}.0/24 to scan queue for fresh rescan!`,
+                        `เพิ่ม Subnet ${subnet}.0/24 เข้าคิวเพื่อสแกนใหม่เรียบร้อยแล้ว!`
+                    );
+                    message.classList.remove('is-error');
+                    message.classList.add('is-busy');
+
+                    refresh();
+                } catch (err) {
+                    message.textContent = translate('Could not rescan: ' + err.message, 'ไม่สามารถสแกนซ้ำได้: ' + err.message);
+                    message.classList.add('is-error');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            });
+        });
+    }
+
     function renderHistory(jobs) {
-        if (!jobs.length) {
+        if (!historyContainer) return;
+        // Deduplicate completed jobs with identical range
+        const seen = new Set();
+        const uniqueJobs = [];
+        for (const job of jobs) {
+            const key = `${job.status}:${job.start_range}:${job.end_range}`;
+            if (job.status === 'completed') {
+                if (seen.has(key)) continue;
+                seen.add(key);
+            }
+            uniqueJobs.push(job);
+        }
+
+        if (!uniqueJobs.length) {
             historyContainer.innerHTML = `<div class="queue-empty-state">${translate('No scan history yet.', 'ยังไม่มีประวัติการสแกน')}</div>`;
             return;
         }
-        historyContainer.innerHTML = jobs.map(job => {
+
+        historyContainer.innerHTML = uniqueJobs.map(job => {
             const total = Number(job.total_ranges) || 0;
             const completed = completedCount(job, total);
             const error = job.error_message ? `<p class="queue-job-error">${escapeHtml(window.siteLocalizeMessage(job.error_message))}</p>` : '';
+            const isSingle = job.start_range === job.end_range;
+            const buttonLabel = isSingle
+                ? translate('Rescan Subnet', 'สแกนซ้ำ')
+                : translate('Rescan Range', 'สแกนช่วงซ้ำ');
+
             return `<article class="queue-history-row">
                 <div class="queue-history-main">
                     <span class="queue-status-badge status-${escapeHtml(job.status)}">${escapeHtml(statusLabel(job.status))}</span>
-                    <strong>${escapeHtml(job.start_range)} – ${escapeHtml(job.end_range)}</strong>
+                    <strong>${escapeHtml(job.start_range)}${isSingle ? '.0/24' : ` – ${escapeHtml(job.end_range)}`}</strong>
                     <span>${translate('{completed} / {total} subnet(s)', '{completed} / {total} ช่วง Subnet', { completed, total })}</span>
                 </div>
                 <div class="queue-history-side" style="display: flex; align-items: center; gap: 10px;">
                     <time>${escapeHtml(formatDate(job.created_at))}</time>
                     <button type="button" class="btn-rescan-subnet btn-secondary btn-sm" data-start="${escapeHtml(job.start_range)}" data-end="${escapeHtml(job.end_range)}">
-                        ${escapeHtml(translate('Rescan Subnet', 'สแกนซ้ำ'))}
+                        ${escapeHtml(buttonLabel)}
                     </button>
                 </div>
                 ${error}
@@ -134,8 +232,8 @@
                     if (!res.ok) throw new Error(result.error || `HTTP ${res.status}`);
 
                     message.textContent = translate(
-                        `Added subnet ${startRange} – ${endRange} to scan queue!`,
-                        `เพิ่มช่วง Subnet ${startRange} – ${endRange} เข้าคิวสแกนเรียบร้อยแล้ว!`
+                        `Added ${startRange === endRange ? 'subnet ' + startRange : 'range ' + startRange + ' – ' + endRange} to scan queue!`,
+                        `เพิ่ม ${startRange === endRange ? 'Subnet ' + startRange : 'ช่วง ' + startRange + ' – ' + endRange} เข้าคิวสแกนเรียบร้อยแล้ว!`
                     );
                     message.classList.remove('is-error');
                     message.classList.add('is-busy');
@@ -200,6 +298,8 @@
             const data = await response.json();
             renderActive(data);
             renderHistory(data.jobs);
+            cachedSubnets = data.scanned_subnets || [];
+            renderSubnets(cachedSubnets);
             updateForm(data);
             activeWork = data.jobs.some(job => ['queued', 'running'].includes(job.status)) ||
                 Boolean(data.activeScanRange || data.pendingScanRange);
@@ -253,8 +353,18 @@
         }
     });
 
+    if (filterSubnetsInput) {
+        filterSubnetsInput.addEventListener('input', () => {
+            currentSubnetFilter = filterSubnetsInput.value.trim().toLowerCase();
+            renderSubnets(cachedSubnets);
+        });
+    }
+
     refresh();
-    document.addEventListener('site-language-change', refresh);
+    document.addEventListener('site-language-change', () => {
+        if (cachedSubnets.length) renderSubnets(cachedSubnets);
+        refresh();
+    });
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             if (refreshTimer) window.clearTimeout(refreshTimer);

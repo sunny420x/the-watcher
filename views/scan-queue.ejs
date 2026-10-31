@@ -61,11 +61,28 @@
             </div>
         </section>
 
+        <section class="queue-panel" aria-labelledby="queue-subnets-title">
+            <div class="queue-panel-heading">
+                <div>
+                    <p class="eyebrow" data-en-text="Scanned Subnets" data-th-text="รายการ Subnet ที่สแกนแล้ว">Scanned Subnets</p>
+                    <h2 id="queue-subnets-title" data-en-text="Subnet History & Rescan" data-th-text="ประวัติ Subnet และสแกนใหม่">Subnet History & Rescan</h2>
+                </div>
+                <span id="queue-subnets-count" class="queue-mode" data-en-text="0 SUBNETS" data-th-text="0 ช่วง">0 SUBNETS</span>
+            </div>
+            <p class="queue-help" data-en-text="List of scanned /24 subnets. You can search by IP prefix and rescan any specific subnet to refresh its findings." data-th-text="รายการ Subnet /24 ที่เคยสแกนแล้ว คุณสามารถค้นหาตาม IP และกดสแกนซ้ำเฉพาะ Subnet ที่ต้องการเพื่ออัปเดตข้อมูลล่าสุด">List of scanned /24 subnets. You can search by IP prefix and rescan any specific subnet to refresh its findings.</p>
+            <div class="queue-filter-bar">
+                <input type="text" id="filter-subnets-input" class="queue-filter-input" placeholder="Filter subnet (e.g. 31.220)..." data-en-placeholder="Filter subnet (e.g. 31.220)..." data-th-placeholder="ค้นหา subnet (เช่น 31.220)..." autocomplete="off">
+            </div>
+            <div id="queue-subnets" class="queue-subnets-container queue-history">
+                <div class="queue-empty-state" data-en-text="Loading scanned subnets…" data-th-text="กำลังโหลดรายการ Subnet…">Loading scanned subnets…</div>
+            </div>
+        </section>
+
         <section class="queue-panel" aria-labelledby="queue-history-title">
             <div class="queue-panel-heading">
                 <div>
                     <p class="eyebrow" data-en-text="Recent jobs" data-th-text="งานล่าสุด">Recent jobs</p>
-                    <h2 id="queue-history-title" data-en-text="Scan history" data-th-text="ประวัติการสแกน">Scan history</h2>
+                    <h2 id="queue-history-title" data-en-text="Batch Queue History" data-th-text="ประวัติคิวงานสแกน">Batch Queue History</h2>
                 </div>
             </div>
             <div id="queue-history" class="queue-history">

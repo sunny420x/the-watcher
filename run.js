@@ -547,7 +547,25 @@ function parseSubnetPrefix(value) {
     return { basePrefix: `${numbers[0]}.${numbers[1]}`, thirdOctet: numbers[2] };
 }
 
+async function cleanupDuplicateQueueJobs() {
+    try {
+        await db.execute(`
+            DELETE j1 FROM scan_queue_jobs j1
+            INNER JOIN scan_queue_jobs j2 
+            WHERE j1.id < j2.id 
+              AND j1.start_range = j2.start_range 
+              AND j1.end_range = j2.end_range
+              AND j1.status = 'completed'
+              AND j2.status = 'completed'
+        `);
+    } catch (e) {
+        console.error('Error cleaning up duplicate queue jobs:', e);
+    }
+}
+
 async function getScanQueueStatus() {
+    await cleanupDuplicateQueueJobs();
+
     const [rows] = await db.execute(`
         SELECT id, base_prefix, start_range, end_range, current_range, status,
                total_ranges, completed_ranges, error_message, created_at,
@@ -559,6 +577,19 @@ async function getScanQueueStatus() {
             id DESC
         LIMIT 25
     `);
+
+    // ดึงรายการ Subnets ที่เคยสแกนไว้จริงจาก scan_cache
+    const [scannedSubnetRows] = await db.execute(`
+        SELECT ip_range, scanned_at,
+               COALESCE(JSON_LENGTH(open_ip), 0) AS web_count,
+               COALESCE(JSON_LENGTH(open_ssh), 0) AS ssh_count,
+               COALESCE(JSON_LENGTH(open_ftp), 0) AS ftp_count,
+               COALESCE(JSON_LENGTH(open_rtsp), 0) AS rtsp_count
+        FROM scan_cache
+        ORDER BY scanned_at DESC
+        LIMIT 500
+    `);
+
     return {
         activeScanRange,
         pendingScanRange: pendingScanRanges.keys().next().value || null,
@@ -571,7 +602,16 @@ async function getScanQueueStatus() {
                 completedRanges = Math.min(totalRanges, rangesBeforeCurrent);
             }
             return { ...row, total_ranges: totalRanges, completed_ranges: completedRanges };
-        })
+        }),
+        scanned_subnets: scannedSubnetRows.map(r => ({
+            ip_range: r.ip_range,
+            scanned_at: new Date(r.scanned_at).toISOString(),
+            web_count: Number(r.web_count) || 0,
+            ssh_count: Number(r.ssh_count) || 0,
+            ftp_count: Number(r.ftp_count) || 0,
+            rtsp_count: Number(r.rtsp_count) || 0,
+            total_findings: (Number(r.web_count) || 0) + (Number(r.ssh_count) || 0) + (Number(r.ftp_count) || 0) + (Number(r.rtsp_count) || 0)
+        }))
     };
 }
 
@@ -614,7 +654,7 @@ async function runScanQueueWorker() {
 
         while (true) {
             const [jobs] = await db.execute(`
-                SELECT id, base_prefix, start_octet, end_octet, completed_ranges
+                SELECT id, base_prefix, start_octet, end_octet, start_range, end_range, completed_ranges
                 FROM scan_queue_jobs
                 WHERE status = 'queued'
                 ORDER BY id ASC
@@ -630,6 +670,8 @@ async function runScanQueueWorker() {
             `, [job.id]);
             if (claim.affectedRows !== 1) continue;
 
+            const isSingleRescan = (job.start_range === job.end_range);
+
             let failed = false;
             for (let octet = Number(job.start_octet) + Number(job.completed_ranges); octet <= Number(job.end_octet); octet++) {
                 const ip_range = `${job.base_prefix}.${octet}`;
@@ -639,6 +681,11 @@ async function runScanQueueWorker() {
                         [ip_range, job.id]
                     );
                     const result = await withExclusiveScan(ip_range, async () => {
+                        // หากเป็นการสั่งสแกน Subnet เจาะจง ให้ทำการสแกนใหม่จริง (Bypass Cache)
+                        if (isSingleRescan) {
+                            await performScan(ip_range);
+                            return { skipped: false };
+                        }
                         const cached = await getScanCache(ip_range);
                         if (isReusableScanCache(cached)) return { skipped: true };
                         await performScan(ip_range);
@@ -1400,6 +1447,18 @@ app.post('/api/scan-queue', async (req, res) => {
         const startRange = `${start.basePrefix}.${start.thirdOctet}`;
         const endRange = `${end.basePrefix}.${end.thirdOctet}`;
         const totalRanges = end.thirdOctet - start.thirdOctet + 1;
+
+        // ตรวจสอบว่ามี job เดียวกันที่ queued หรือ running อยู่แล้วหรือไม่ ป้องกันการ enqueue ซ้ำ
+        const [existing] = await connection.execute(`
+            SELECT id FROM scan_queue_jobs
+            WHERE start_range = ? AND end_range = ? AND status IN ('queued', 'running')
+            LIMIT 1
+        `, [startRange, endRange]);
+
+        if (existing.length > 0) {
+            return res.status(200).json({ id: existing[0].id, message: 'This range is already queued or scanning.' });
+        }
+
         const [insert] = await connection.execute(`
             INSERT INTO scan_queue_jobs
                 (base_prefix, start_octet, end_octet, start_range, end_range, total_ranges)
