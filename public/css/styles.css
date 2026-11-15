@@ -1620,7 +1620,7 @@ html[data-theme="light"] .queue-pulse {
 
 .index-search-form {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(140px, 190px) auto;
+    grid-template-columns: minmax(220px, 1fr) auto;
     align-items: end;
     gap: 12px;
     padding: 16px;

@@ -88,8 +88,8 @@
     window.addEventListener('popstate', () => {
         if (window.location.pathname !== '/' && window.location.pathname !== '/search') return;
         const params = new URLSearchParams(window.location.search);
-        form.elements.q.value = params.get('q') || '';
-        form.elements.service.value = params.get('service') || '';
+        if (form.elements.q) form.elements.q.value = params.get('q') || '';
+        if (form.elements.service) form.elements.service.value = params.get('service') || '';
         loadResults(window.location.href);
     });
 })();

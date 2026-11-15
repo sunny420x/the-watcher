@@ -46,15 +46,6 @@
                 <span data-en-text="Search" data-th-text="คำค้น">Search</span>
                 <input type="search" name="q" value="<%= q %>" placeholder="IP, host, title, or range" data-en-placeholder="IP, host, title, or range" data-th-placeholder="IP, โฮสต์, Title หรือช่วง IP">
             </label>
-            <label>
-                <span data-en-text="Service" data-th-text="บริการ">Service</span>
-                <select name="service">
-                    <option value="" data-en-text="All services" data-th-text="ทุกบริการ">All services</option>
-                    <% services.forEach(service => { %>
-                        <option value="<%= service %>" <%= selectedService === service ? 'selected' : '' %>><%= service.toUpperCase() %></option>
-                    <% }) %>
-                </select>
-            </label>
             <div class="index-search-actions">
                 <button class="index-search-submit" type="submit" data-en-text="Search" data-th-text="ค้นหา">Search</button>
                 <a href="/" data-en-text="Clear" data-th-text="ล้าง">Clear</a>

@@ -42,11 +42,11 @@
     <% if (totalPages > 1) { %>
         <nav class="index-pagination" aria-label="Search result pages" data-en-aria-label="Search result pages" data-th-aria-label="หน้าผลการค้นหา">
             <% if (page > 1) { %>
-                <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&page=<%= page - 1 %>" data-en-text="Previous" data-th-text="ก่อนหน้า">Previous</a>
+                <a href="/?q=<%= encodeURIComponent(q) %><%= selectedService ? '&service=' + encodeURIComponent(selectedService) : '' %>&page=<%= page - 1 %>" data-en-text="Previous" data-th-text="ก่อนหน้า">Previous</a>
             <% } else { %><span></span><% } %>
             <span data-en-text="Page <%= page %> of <%= totalPages %>" data-th-text="หน้า <%= page %> จาก <%= totalPages %>">Page <%= page %> of <%= totalPages %></span>
             <% if (page < totalPages) { %>
-                <a href="/?q=<%= encodeURIComponent(q) %>&service=<%= encodeURIComponent(selectedService) %>&page=<%= page + 1 %>" data-en-text="Next" data-th-text="ถัดไป">Next</a>
+                <a href="/?q=<%= encodeURIComponent(q) %><%= selectedService ? '&service=' + encodeURIComponent(selectedService) : '' %>&page=<%= page + 1 %>" data-en-text="Next" data-th-text="ถัดไป">Next</a>
             <% } else { %><span></span><% } %>
         </nav>
     <% } %>
