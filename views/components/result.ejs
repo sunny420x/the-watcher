@@ -14,12 +14,14 @@
                 <th colspan="2" data-en-text="Action" data-th-text="การทำงาน">Action</th>
             </tr>
             <% if(open_ip.length != 0) { %>
-                open_ip.forEach(ip => { 
-                    %>
+                <% open_ip.forEach(ip => {
+                    const displayHost = String(ip.host || '').replace(/^https?:\/\//i, '');
+                    const hostIp = displayHost.split('/')[0].split(':')[0];
+                %>
                     <tr <% if(ip.hidden_by_default) {%>class="hidden"<%}%> >
                         <td data-category-label="<%= ip.type %>"><%=ip.type%></td>
-                        <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= ip.host.slice(7) %></a></td>
-                        <td><button onclick="nmap('<%=ip.host.slice(7)%>')">Nmap</button> <button onclick="whois('<%=ip.host.slice(7)%>')">WHOIS</button></td>
+                        <td><a href="<%= ip.host %>" target="_blank" rel="noopener noreferrer"><% if(ip.title) { %>[<%=ip.title%>]<% } %> <%= displayHost %></a></td>
+                        <td><button onclick="nmap('<%=hostIp%>')">Nmap</button> <button onclick="whois('<%=hostIp%>')">WHOIS</button></td>
                     </tr>
                 <% }) %>
             <%}%>

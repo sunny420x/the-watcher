@@ -498,10 +498,12 @@ function withExclusiveScan(ip_range, task) {
 
 async function performScan(ip_range) {
     const open_ip = await scanWebServer(ip_range);
-    const open_ssh = await scanSSH(ip_range);
-    const open_ftp = await scanFTP(ip_range);
-    const open_rtsp = await scanRTSP(ip_range);
-    const open_mysql = await scanMySQL(ip_range);
+    const [open_ssh, open_ftp, open_rtsp, open_mysql] = await Promise.all([
+        scanSSH(ip_range),
+        scanFTP(ip_range),
+        scanRTSP(ip_range),
+        scanMySQL(ip_range)
+    ]);
 
     await saveScanCache(ip_range, open_ip, open_ssh, open_ftp, open_rtsp, open_mysql);
     return { open_ip, open_ssh, open_ftp, open_rtsp, open_mysql };
@@ -1317,10 +1319,33 @@ app.post('/summary/refresh', async (req, res) => {
     }
 });
 
-app.get('/take-a-walk', (req, res) => {
-    const parts = getClientIPv4(req).split('.');
+app.get('/take-a-walk', async (req, res) => {
+    const clientIp = getClientIPv4(req);
+    const parts = clientIp.split('.');
+    let query = `${parts[0]}.${parts[1]}.${parts[2]}`;
+
+    if (clientIp === '127.0.0.1') {
+        try {
+            const [rows] = await db.execute(`
+                SELECT ip_range
+                FROM scan_cache
+                WHERE COALESCE(JSON_LENGTH(open_ip), 0) > 0
+                   OR COALESCE(JSON_LENGTH(open_ssh), 0) > 0
+                   OR COALESCE(JSON_LENGTH(open_ftp), 0) > 0
+                   OR COALESCE(JSON_LENGTH(open_rtsp), 0) > 0
+                ORDER BY scanned_at DESC
+                LIMIT 1
+            `);
+            if (rows.length > 0 && isValidRangePrefix(rows[0].ip_range)) {
+                query = rows[0].ip_range;
+            }
+        } catch (error) {
+            console.error('Could not pick cached subnet for /take-a-walk:', error);
+        }
+    }
+
     res.render('home.ejs', {
-        query: `${parts[0]}.${parts[1]}.${parts[2]}`
+        query
     });
 });
 
@@ -1707,26 +1732,41 @@ app.get('/run/:range', async (req, res) => {
     }
 
     try {
-        const payload = await withExclusiveScan(ip_range, async () => {
-            const cached = await getScanCache(ip_range);
-            if (isReusableScanCache(cached)) {
+        const fastCached = await getScanCache(ip_range);
+        const payload = isReusableScanCache(fastCached)
+            ? (() => {
                 console.log(`[CACHE] ${ip_range}`);
                 return {
                     data: {
-                        open_ip: cached.open_ip,
-                        open_ssh: cached.open_ssh,
-                        open_ftp: cached.open_ftp,
-                        open_rtsp: cached.open_rtsp,
+                        open_ip: fastCached.open_ip,
+                        open_ssh: fastCached.open_ssh,
+                        open_ftp: fastCached.open_ftp,
+                        open_rtsp: fastCached.open_rtsp,
                         cached: true,
-                        scanned_at: cached.scanned_at
+                        scanned_at: fastCached.scanned_at
                     }
                 };
-            }
+            })()
+            : await withExclusiveScan(ip_range, async () => {
+                const cached = await getScanCache(ip_range);
+                if (isReusableScanCache(cached)) {
+                    console.log(`[CACHE] ${ip_range}`);
+                    return {
+                        data: {
+                            open_ip: cached.open_ip,
+                            open_ssh: cached.open_ssh,
+                            open_ftp: cached.open_ftp,
+                            open_rtsp: cached.open_rtsp,
+                            cached: true,
+                            scanned_at: cached.scanned_at
+                        }
+                    };
+                }
 
-            console.log(`[SCAN] ${ip_range}`);
-            const results = await performScan(ip_range);
-            return { data: { ...results, cached: false, scanned_at: new Date() } };
-        });
+                console.log(`[SCAN] ${ip_range}`);
+                const results = await performScan(ip_range);
+                return { data: { ...results, cached: false, scanned_at: new Date() } };
+            });
 
         const titleKeywords = await getScanTitleKeywords();
         payload.data.open_ip = (payload.data.open_ip || []).map(host => {

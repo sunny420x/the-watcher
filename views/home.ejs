@@ -59,6 +59,8 @@
             </div>
         </div>
     </main>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/network-constellation.js"></script>
     <script>
         let i = 0
         let range = "<%=query%>"
@@ -103,31 +105,34 @@
                 const resultLists = [data.data.open_ip, data.data.open_ssh, data.data.open_ftp, data.data.open_rtsp]
                 const isEmpty = resultLists.every(results => !Array.isArray(results) || results.length === 0)
                 if (isEmpty && seekActive) {
-                    networkConstellation.clear()
-                    Swal.fire({
-                        toast: true,
-                        position: 'bottom-end',
-                        icon: 'info',
-                        title: window.siteTranslate(
-                            `Nothing found in ${range}; seeking next subnet`,
-                            `ไม่พบโฮสต์ใน ${range}; กำลังค้นหา Subnet ถัดไป`
-                        ),
-                        showConfirmButton: false,
-                        timer: 1800,
-                        timerProgressBar: false,
-                        customClass: { popup: 'theme-toast' }
-                    })
+                    if (window.networkConstellation) networkConstellation.clear()
+                    if (window.Swal) {
+                        Swal.fire({
+                            toast: true,
+                            position: 'bottom-end',
+                            icon: 'info',
+                            title: window.siteTranslate(
+                                `Nothing found in ${range}; seeking next subnet`,
+                                `ไม่พบโฮสต์ใน ${range}; กำลังค้นหา Subnet ถัดไป`
+                            ),
+                            showConfirmButton: false,
+                            timer: 1800,
+                            timerProgressBar: false,
+                            customClass: { popup: 'theme-toast' }
+                        })
+                    }
                     seekTimer = setTimeout(() => next(true), 900)
                 } else {
                     seekActive = false
                     document.getElementById('result').innerHTML = data.html
                     window.applySiteLanguage(document.getElementById('result'))
-                    networkConstellation.render(data.data.open_ip || [], range)
+                    if (window.networkConstellation) networkConstellation.render(data.data.open_ip || [], range)
                 }
             }).catch(error => {
                 if (requestId === scanRequestId) {
                     seekActive = false
                     console.error('Network scan failed:', error)
+                    document.getElementById('result').innerHTML = `<div class="empty-state" role="alert">${window.siteTranslate('Could not scan this subnet. Please try again.', 'ไม่สามารถสแกน Subnet นี้ได้ กรุณาลองใหม่อีกครั้ง')}</div>`
                 }
             });
 
@@ -148,7 +153,7 @@
             run(range + (current += 1)); document.getElementById('query').value = range + current
             history.pushState(null, null, '/' + range + current);
 
-            networkConstellation.clear();
+            if (window.networkConstellation) networkConstellation.clear();
             document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
         }
 
@@ -167,7 +172,7 @@
             run(range + (current -= 1)); document.getElementById('query').value = range + current
             history.pushState(null, null, '/' + range + current);
 
-            networkConstellation.clear();
+            if (window.networkConstellation) networkConstellation.clear();
             document.getElementsByName('currentTarget').forEach(el => el.textContent = range + current);
         }
 
@@ -201,6 +206,9 @@
 
         document.addEventListener("keydown", (event) => {
             if (event.defaultPrevented) {
+                return;
+            }
+            if (event.target && event.target.closest('input, textarea, select, [contenteditable]')) {
                 return;
             }
 
@@ -328,8 +336,6 @@
                 });
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="/js/network-constellation.js"></script>
 </body>
 
 </html>
