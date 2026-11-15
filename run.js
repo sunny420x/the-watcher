@@ -4,7 +4,7 @@ const express = require('express')
 const app = express()
 const path = require('path');
 const bodyParser = require('body-parser')
-const { execFile } = require('child_process');
+const { execFile, fork } = require('child_process');
 const mysql = require('mysql2/promise');
 const { syncDatabaseSchema } = require('./schema/migrate');
 
@@ -35,6 +35,7 @@ const pendingScanRanges = new Map();
 let scanTaskChain = Promise.resolve();
 let scanSummaryCache = null;
 let scanSummaryRefreshPromise = null;
+let summaryWorkerProcess = null;
 
 function markScanPending(ip_range) {
     pendingScanRanges.set(ip_range, (pendingScanRanges.get(ip_range) || 0) + 1);
@@ -1184,23 +1185,143 @@ async function buildScanSummary() {
         };
 }
 
-async function persistScanSummary(summary) {
+async function persistScanSummary(summary, { markRefreshed = false } = {}) {
     await db.execute(`
         INSERT IGNORE INTO scan_summary_refresh (id, refreshed_at)
         VALUES (1, NULL)
     `);
-    await db.execute(`
-        UPDATE scan_summary_refresh
-        SET summary_json = ?, summarized_at = ?
-        WHERE id = 1
-    `, [JSON.stringify(summary), summary.summarizedAt]);
+    if (markRefreshed) {
+        await db.execute(`
+            UPDATE scan_summary_refresh
+            SET refreshed_at = CURRENT_TIMESTAMP,
+                summary_json = ?,
+                summarized_at = ?
+            WHERE id = 1
+        `, [JSON.stringify(summary), summary.summarizedAt]);
+    } else {
+        await db.execute(`
+            UPDATE scan_summary_refresh
+            SET summary_json = ?, summarized_at = ?
+            WHERE id = 1
+        `, [JSON.stringify(summary), summary.summarizedAt]);
+    }
 }
 
-async function buildAndPersistScanSummary() {
-    const summary = await buildScanSummary();
-    await persistScanSummary(summary);
-    scanSummaryCache = summary;
-    return summary;
+function isSummaryWorkerRunning() {
+    return Boolean(
+        summaryWorkerProcess &&
+        summaryWorkerProcess.exitCode === null &&
+        !summaryWorkerProcess.killed
+    );
+}
+
+async function readSavedScanSummaryFromDb() {
+    const [[row]] = await db.execute(`
+        SELECT summary_json, summarized_at
+        FROM scan_summary_refresh
+        WHERE id = 1
+    `);
+    if (row && row.summary_json) {
+        try {
+            const summary = typeof row.summary_json === 'string'
+                ? JSON.parse(row.summary_json)
+                : row.summary_json;
+            if (summary && summary.stats && Array.isArray(summary.categoryRows)) {
+                summary.summarizedAt = row.summarized_at
+                    ? new Date(row.summarized_at)
+                    : new Date(summary.summarizedAt);
+                scanSummaryCache = summary;
+                return summary;
+            }
+        } catch (error) {
+            console.error('Could not read the saved scan summary:', error);
+        }
+    }
+    return null;
+}
+
+function startSummaryBackgroundProcess({ markRefreshed = true } = {}) {
+    if (isSummaryWorkerRunning()) {
+        return { started: false, running: true };
+    }
+
+    const args = ['--summary-worker'];
+    if (markRefreshed) args.push('--mark-refreshed');
+
+    const child = fork(__filename, args, {
+        stdio: ['ignore', 'inherit', 'inherit', 'ipc']
+    });
+    summaryWorkerProcess = child;
+
+    child.on('message', message => {
+        if (message && message.type === 'summary-completed' && message.summary) {
+            const summary = message.summary;
+            summary.summarizedAt = summary.summarizedAt ? new Date(summary.summarizedAt) : new Date();
+            scanSummaryCache = summary;
+        }
+    });
+
+    child.on('error', error => {
+        console.error('Summary background process error:', error);
+        if (summaryWorkerProcess === child) {
+            summaryWorkerProcess = null;
+        }
+    });
+
+    child.on('exit', async (code) => {
+        if (summaryWorkerProcess === child) {
+            summaryWorkerProcess = null;
+        }
+        if (code === 0) {
+            try {
+                await readSavedScanSummaryFromDb();
+            } catch (error) {
+                console.error('Could not reload scan summary after worker exit:', error);
+            }
+        } else {
+            console.error(`Summary background process exited with code ${code}`);
+        }
+    });
+
+    return { started: true, running: true };
+}
+
+async function runSummaryWorkerProcess() {
+    const markRefreshed = process.argv.includes('--mark-refreshed');
+    let lockConnection;
+    let lockAcquired = false;
+    try {
+        lockConnection = await db.getConnection();
+        const [[lock]] = await lockConnection.query("SELECT GET_LOCK('watcher_summary_refresh_worker', 0) AS acquired");
+        lockAcquired = Number(lock.acquired) === 1;
+        if (!lockAcquired) {
+            console.log('[SUMMARY WORKER] Another summary process is already running; skipping.');
+            return;
+        }
+
+        console.log('[SUMMARY WORKER] Building scan summary in background process...');
+        const summary = await buildScanSummary();
+        await persistScanSummary(summary, { markRefreshed });
+        if (typeof process.send === 'function') {
+            process.send({ type: 'summary-completed', summary });
+        }
+        console.log('[SUMMARY WORKER] Scan summary completed.');
+    } catch (error) {
+        console.error('[SUMMARY WORKER] Failed to build scan summary:', error);
+        process.exitCode = 1;
+    } finally {
+        if (lockConnection) {
+            if (lockAcquired) {
+                try {
+                    await lockConnection.query("SELECT RELEASE_LOCK('watcher_summary_refresh_worker')");
+                } catch (error) {
+                    console.error('[SUMMARY WORKER] Could not release lock:', error);
+                }
+            }
+            lockConnection.release();
+        }
+        await db.end().catch(() => {});
+    }
 }
 
 async function getScanSummary() {
@@ -1208,28 +1329,23 @@ async function getScanSummary() {
     if (scanSummaryRefreshPromise) return scanSummaryRefreshPromise;
 
     const summaryPromise = (async () => {
-        const [[row]] = await db.execute(`
-            SELECT summary_json, summarized_at
-            FROM scan_summary_refresh
-            WHERE id = 1
-        `);
-        if (row && row.summary_json) {
-            try {
-                const summary = typeof row.summary_json === 'string'
-                    ? JSON.parse(row.summary_json)
-                    : row.summary_json;
-                if (summary && summary.stats && Array.isArray(summary.categoryRows)) {
-                    summary.summarizedAt = row.summarized_at
-                        ? new Date(row.summarized_at)
-                        : new Date(summary.summarizedAt);
-                    scanSummaryCache = summary;
-                    return summary;
-                }
-            } catch (error) {
-                console.error('Could not read the saved scan summary; rebuilding it:', error);
-            }
-        }
-        return buildAndPersistScanSummary();
+        const saved = await readSavedScanSummaryFromDb();
+        if (saved) return saved;
+
+        startSummaryBackgroundProcess({ markRefreshed: false });
+        return {
+            stats: {
+                total_ips: 0,
+                ranges_with_findings: 0,
+                web_ips: 0,
+                ssh_ips: 0,
+                ftp_ips: 0,
+                rtsp_ips: 0
+            },
+            categoryRows: [],
+            keywordRows: [],
+            summarizedAt: new Date()
+        };
     })();
     scanSummaryRefreshPromise = summaryPromise;
     try {
@@ -1262,7 +1378,11 @@ async function renderScanSummary(req, res) {
             getScanSummary(),
             getScanSummaryRefreshAvailableAt()
         ]);
-        res.render('summary.ejs', { ...summary, refreshAvailableAt });
+        res.render('summary.ejs', {
+            ...summary,
+            refreshAvailableAt,
+            isRefreshing: isSummaryWorkerRunning()
+        });
     } catch (error) {
         console.error('Scan summary page error:', error);
         res.status(500).send('Could not load the scan summary.');
@@ -1274,48 +1394,65 @@ app.get('/search', renderSearchPage);
 
 app.get('/summary', renderScanSummary);
 
+app.get('/api/summary/status', async (req, res) => {
+    try {
+        const isRefreshing = isSummaryWorkerRunning();
+        if (!isRefreshing && !scanSummaryCache) {
+            await readSavedScanSummaryFromDb();
+        }
+        const refreshAvailableAt = await getScanSummaryRefreshAvailableAt();
+        res.json({
+            isRefreshing,
+            summarizedAt: scanSummaryCache?.summarizedAt
+                ? new Date(scanSummaryCache.summarizedAt).toISOString()
+                : null,
+            refreshAvailableAt: refreshAvailableAt ? refreshAvailableAt.toISOString() : null
+        });
+    } catch (error) {
+        console.error('Summary status error:', error);
+        res.status(500).json({ error: 'Could not check summary status.' });
+    }
+});
+
 app.get('/api', (req, res) => {
     res.render('api.ejs');
 });
 
 app.post('/summary/refresh', async (req, res) => {
-    let connection;
+    const wantsJson = req.get('X-Requested-With') === 'XMLHttpRequest' ||
+        (req.headers.accept && req.headers.accept.includes('application/json'));
+
     try {
-        connection = await db.getConnection();
-        await connection.beginTransaction();
-        await connection.execute(`
-            INSERT IGNORE INTO scan_summary_refresh (id, refreshed_at)
-            VALUES (1, NULL)
-        `);
-        const [[row]] = await connection.execute(`
-            SELECT
-                UNIX_TIMESTAMP(DATE_ADD(refreshed_at, INTERVAL 1 DAY)) * 1000 AS available_at_ms,
-                DATE_ADD(refreshed_at, INTERVAL 1 DAY) > CURRENT_TIMESTAMP AS is_locked
-            FROM scan_summary_refresh
-            WHERE id = 1
-            FOR UPDATE
-        `);
-        if (row.is_locked) {
-            await connection.rollback();
+        if (isSummaryWorkerRunning()) {
+            if (wantsJson) {
+                return res.status(202).json({ status: 'running', isRefreshing: true });
+            }
             return res.redirect(303, '/summary');
         }
-        const summary = await buildScanSummary();
-        await connection.execute(`
-            UPDATE scan_summary_refresh
-            SET refreshed_at = CURRENT_TIMESTAMP,
-                summary_json = ?,
-                summarized_at = ?
-            WHERE id = 1
-        `, [JSON.stringify(summary), summary.summarizedAt]);
-        await connection.commit();
-        scanSummaryCache = summary;
-        res.redirect(303, '/summary');
+
+        const refreshAvailableAt = await getScanSummaryRefreshAvailableAt();
+        if (refreshAvailableAt) {
+            if (wantsJson) {
+                return res.status(429).json({
+                    status: 'locked',
+                    isRefreshing: false,
+                    refreshAvailableAt: refreshAvailableAt.toISOString()
+                });
+            }
+            return res.redirect(303, '/summary');
+        }
+
+        startSummaryBackgroundProcess({ markRefreshed: true });
+        if (wantsJson) {
+            return res.status(202).json({ status: 'started', isRefreshing: true });
+        }
+        return res.redirect(303, '/summary');
     } catch (error) {
-        if (connection) await connection.rollback().catch(() => {});
-        console.error('Could not refresh the scan summary:', error);
+        console.error('Could not start scan summary refresh:', error);
+        if (wantsJson) {
+            return res.status(500).json({ error: 'Could not refresh the scan summary.' });
+        }
         res.status(500).send('Could not refresh the scan summary.');
-    } finally {
-        if (connection) connection.release();
     }
 });
 
@@ -1846,4 +1983,8 @@ async function startServer() {
     });
 }
 
-startServer();
+if (process.argv.includes('--summary-worker')) {
+    runSummaryWorkerProcess();
+} else {
+    startServer();
+}

@@ -26,9 +26,14 @@
                 <span class="summary-cache-status"><span data-en-text="Cached at" data-th-text="แคชเมื่อ">Cached at</span> <time data-localized-date="<%= summarizedAt.toISOString() %>"><%= summarizedAt.toLocaleString() %></time></span>
                 <div class="summary-refresh-controls">
                     <form class="summary-refresh-form" method="post" action="/summary/refresh">
-                        <button class="summary-refresh-button" type="submit" <%= refreshAvailableAt ? 'disabled' : '' %> data-en-text="Re-summarize" data-th-text="สรุปใหม่">Re-summarize</button>
+                        <button class="summary-refresh-button" type="submit"
+                            <%= (isRefreshing || refreshAvailableAt) ? 'disabled' : '' %>
+                            data-refreshing="<%= isRefreshing ? 'true' : 'false' %>"
+                            data-en-text="<%= isRefreshing ? 'Summarizing…' : 'Re-summarize' %>"
+                            data-th-text="<%= isRefreshing ? 'กำลังสรุปผล…' : 'สรุปใหม่' %>"><%= isRefreshing ? 'Summarizing…' : 'Re-summarize' %></button>
                     </form>
-                    <% if (refreshAvailableAt) { %>
+                    <span id="summary-refresh-status" class="summary-refresh-countdown" <%= isRefreshing ? '' : 'hidden' %> data-en-text="Summarizing in background…" data-th-text="กำลังประมวลผลสรุปเบื้องหลัง…">Summarizing in background…</span>
+                    <% if (refreshAvailableAt && !isRefreshing) { %>
                         <span id="summary-refresh-countdown" class="summary-refresh-countdown" data-unlock-at="<%= refreshAvailableAt.getTime() %>" data-en-template="Available again in {time}" data-th-template="กดได้อีกครั้งใน {time}"></span>
                     <% } %>
                 </div>
